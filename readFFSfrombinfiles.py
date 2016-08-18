@@ -5,7 +5,7 @@ class readFFSfrombinfiles(object):
     Read FFS data from bin files (###.bin) which are collected at timemode
     input variables:
     filenames : a python list of filenames
-    channels : the number of channels in FFS data.
+    channels : a python list of channels in FFS data.
 
     output variables;
     data : a python list of numpy arrays.
