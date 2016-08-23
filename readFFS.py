@@ -10,7 +10,7 @@ class readFFS(object):
 
     """
 
-    def __init__(self, filenames=[], channels=[], frequency=0):
+    def __init__(self, filenames=[], channels=[], frequency=1):
         if isinstance(filenames, list):
             self._filenames = filenames
         else:

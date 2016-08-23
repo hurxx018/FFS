@@ -128,7 +128,8 @@ def main():
     filename1 = "A488_cal.1.001.bin"
     filename2 = "A488_cal.2.001.bin"
     filename3 = "A488_cal.3.001.bin"
-    ffsdata = rffs.readFFSfrombinfiles([filename1, filename2, filename3], [1,2,3])
+    ffsdata = rffs.readFFSfrombinfiles([filename1, filename2, filename3], \
+                                        [1,2,3], frequency=100000)
     print("filenames : ")
     for x in ffsdata.getFilenames():
         print("  {}".format(x))
