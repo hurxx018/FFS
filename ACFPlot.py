@@ -7,15 +7,15 @@ import matplotlib.pyplot as plt
 class ACFPlot(object):
 
     def __init__(self, title=None):
-        self.title = title
+        self.__title = title
 
 
     def plot(self, x, y):
-        if self.title == None:
+        if self.__title == None:
             p0 = pg.plot(title="Auto-correlation",
                     labels={'left':'G', 'bottom':'t (s)'})
         else:
-            p0 = pg.plot(title=self.title,
+            p0 = pg.plot(title=self.__title,
                     labels={'left':'G', 'bottom':'t (s)'})
 
         p0.plot(x, y, pen=None, symbol='o', symbolSize=10)
@@ -27,11 +27,11 @@ class ACFPlot(object):
 
 
     def mplot(self, x, y, yerr):
-        if self.title == None:
+        if self.__title == None:
             plt.title("Auto-correlation")
             p0 = plt.errorbar(x, y, yerr=yerr, fmt="o", color="blue", ecolor="red")
         else:
-            plt.title(self.title)
+            plt.title(self.__title)
             p0 = plt.errorbar(x, y, yerr=yerr, fmt="o", color="blue", ecolor="red")
 
         plt.xlabel("t (s)")
@@ -41,11 +41,11 @@ class ACFPlot(object):
 
 
     def fitplot(self, x, y, y_fit):
-        if self.title == None:
+        if self.__title == None:
             p0 = pg.plot(title="Auto-correlation with a fit function",
                     labels={'left':'G', 'bottom':'t (s)'})
         else:
-            p0 = pg.plot(title=self.title,
+            p0 = pg.plot(title=self.__title,
                     labels={'left':'G', 'bottom':'t (s)'})
 
         p0.plot(x, y, pen=None, symbol='o', symbolSize=10)
@@ -57,11 +57,11 @@ class ACFPlot(object):
         return
 
     def mfitplot(self, x, y, yerr, y_fit):
-        if self.title == None:
+        if self.__title == None:
             plt.title("Auto-correlation with a fit function")
             p0 = plt.errorbar(x, y, yerr=yerr, fmt="o", color="blue", ecolor="red")
         else:
-            plt.title(self.title)
+            plt.title(self.__title)
             p0 = plt.errorbar(x, y, yerr=yerr, fmt="o", color="blue", ecolor="red")
 
         plt.plot(x, y_fit, color="green")

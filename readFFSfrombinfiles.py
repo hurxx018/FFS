@@ -17,14 +17,14 @@ class readFFSfrombinfiles(readFFS):
     """
     def __init__(self, filenames=[], channels=[], frequency=0):
         readFFS.__init__(self, filenames, channels, frequency)
-        self._data = self.readFFSData()
+        self.data = self.readFFSData()
 
     def readFFSData(self):
-        if self._filenames == []:
+        if self.getFilenames() == []:
             return []
         else:
             data = []
-            for filename in self._filenames:
+            for filename in self.getFilenames():
                 with open(filename) as f:
                     temp_data = np.fromfile(f, dtype=np.int32)
                 data.append(temp_data)
@@ -33,11 +33,11 @@ class readFFSfrombinfiles(readFFS):
 
     def setFilenames(self, filenames):
         readFFS.setFilenames(self, filenames)
-        self._data = self.readFFSData()
+        self.data = self.readFFSData()
 
 
     def getData(self):
-        return self._data
+        return self.data
 
 
     def getInfo(self):
@@ -50,7 +50,7 @@ class readFFSfrombinfiles(readFFS):
 
     def __str__(self):
         for key, value in self.getInfo().items():
-            print("{0}  :   {1}".format(key[1:], value))
+            print("{0}  :   {1}".format(key, value))
         return ""
 
 

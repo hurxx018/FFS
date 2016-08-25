@@ -9,9 +9,9 @@ class FCSFitter(FFSFitter):
     Fits auto-correlations or cross-correlations
     """
 
-    def __init__(self, model="2DG_SINGLE", params=None, fixed=None, \
+    def __init__(self, model="2DG_FCS_SINGLE", params=None, fixed=None, \
                     bounds=None, method="lm"):
-        if model == "2DG_SINGLE":
+        if model == "2DG_FCS_SINGLE":
             if params != None:
                 assert len(params) == 3
             if fixed != None:
@@ -21,11 +21,11 @@ class FCSFitter(FFSFitter):
             FFSFitter.__init__(self, model, params, fixed, bounds, method)
 
         else:
-            raise RuntimeError("The model {} is not available.".format(model))
+            raise RuntimeError("The model should be {}.".format(model))
 
-
+    # TO DO: Employ the LMFIT package
     def fit(self, X, y, y_sigma=None):
-        if self.getModel() == "2DG_SINGLE":
+        if self.getModel() == "2DG_FCS_SINGLE":
             popt, pcov = curve_fit(self.acf2DGDiff, X, y, p0=self.getParams(), \
                             sigma=y_sigma, absolute_sigma=True)#, \
                             #bounds=self._bounds)
@@ -63,7 +63,7 @@ def main():
     print("channels : ", ffsdata.getChannels())
 
     acf = fcs.calfcsTransformer(channels=[1])
-    print(acf.getInfo())
+    print(acf)
     xx = acf.transform(ffsdata)
 
     acffit = FCSFitter(model="2DG_SINGLE", params=[0.001, 0.0001, 0.00001])

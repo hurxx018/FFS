@@ -7,53 +7,53 @@ class FFSFitter(object):
     """
 
     def __init__(self, model="", params=[], fixed=[], bounds=[], method=""):
-        self._model = model
-        self._params = params
-        self._fixed = fixed
-        self._bounds = bounds
-        self._method = method
+        self.model = model
+        self.params = params
+        self.fixed = fixed
+        self.bounds = bounds
+        self.method = method
 
 
     def setModel(self, model):
-        self._model = model
+        self.model = model
         return
 
 
     def setParams(self, params):
-        self._params = params
+        self.params = params
         return
 
 
     def setFixed(self, fixed):
-        self._fixed = fixed
+        self.fixed = fixed
         return
 
 
     def setBounds(self, bounds):
-        self._bounds = bounds
+        self.bounds = bounds
         return
 
 
     def setMethod(self, method):
-        self._method = method
+        self.method = method
         return
 
 
     def getModel(self):
-        return self._model
+        return self.model
 
 
     def getParams(self):
-        return self._params
+        return self.params
 
 
     def getFixed(self):
-        return self._fixed
+        return self.fixed
 
 
     def getBounds(self):
-        return self._bounds
+        return self.bounds
 
 
     def getMethod(self):
-        return self._method
+        return self.method
