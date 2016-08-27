@@ -74,8 +74,9 @@ class calfcsTransformer(object):
                             .reshape((n_segment, self.segmentlength))
         temp_shape = temp_arr1.shape
 
-        correlations = []
-        correlations_stderr = []
+        correlations = np.zeros(len(time)) #[]
+        correlations_stderr = np.zeros(len(time))#[]
+        index = 0
         for t0 in range(self.tau1_min, self.tau1_max+1):
             t_arr1 = temp_arr1[:, 0:self.segmentlength-t0]*1.
             t_arr2 = temp_arr2[:, t0:self.segmentlength]*1.
@@ -83,9 +84,11 @@ class calfcsTransformer(object):
             t_corr = np.mean(t_arr1*t_arr2, axis=1)          \
                         / np.mean(t_arr1, axis=1)            \
                         / np.mean(t_arr2, axis=1) - 1.
-            correlations.append(np.mean(t_corr))
-            correlations_stderr.append(np.std(t_corr)        \
-                        / np.sqrt(temp_shape[0] - 1))
+            correlations[index] = np.mean(t_corr)
+            correlations_stderr[index]   \
+                    = np.std(t_corr) / np.sqrt(temp_shape[0] - 1)
+            index += 1
+
 
         temp_segmentlength = self.segmentlength
         number_of_rebins = (np.log(self.segmentlength / self.npts_limit)  \
@@ -104,9 +107,10 @@ class calfcsTransformer(object):
                 t_corr = np.mean(t_arr1*t_arr2, axis=1)             \
                                     / np.mean(t_arr1, axis=1)       \
                                     / np.mean(t_arr2, axis=1) - 1.
-                correlations.append(np.mean(t_corr))
-                correlations_stderr.append(np.std(t_corr)           \
-                                    / np.sqrt(temp_shape[0]-1))
+                correlations[index] = np.mean(t_corr)
+                correlations_stderr[index]  = np.std(t_corr)           \
+                                    / np.sqrt(temp_shape[0]-1)
+                index += 1
 
         Correlations = collections.namedtuple("Correlations",      \
                             ["time","correlations", "correlations_stderr"])
