@@ -10,13 +10,13 @@ class ACF3DGDiffFitter(FFSFitter):
     """
 
     def __init__(self, analysis="FCS"
-                     , model="3DG_FCS_SINGLE"
+                     , model="3DG_Diff_FCS_SINGLE"
                      , params=[0.001, 0.0001, 25., 0.]
                      , fixed=[0, 0, 0, 0]
                      , bounds=[[0, np.inf], [0, np.inf], [0, np.inf], [0, np.inf]]
                      , method="leastsq"):
 
-        if analysis == "FCS" and model == "3DG_FCS_SINGLE":
+        if analysis == "FCS" and model == "3DG_Diff_FCS_SINGLE":
             assert len(params) == 4
             assert len(fixed) == 4
             assert len(bounds) == 4
@@ -36,7 +36,7 @@ class ACF3DGDiffFitter(FFSFitter):
 
         else:
             raise RuntimeError("The analysis and the model should be {} and {}."
-                                .format(["FCS", "3DG_FCS_SINGLE"]))
+                                .format(["FCS", "3DG_Diff_FCS_SINGLE"]))
 
 
     def fit(self, X, y, y_sigma=None, fit_kws=None):
@@ -117,7 +117,7 @@ def main():
     xx = acf.transform(ffsdata)
 
     acffit = ACF3DGDiffFitter(analysis="FCS"
-                        , model="3DG_FCS_SINGLE"
+                        , model="3DG_Diff_FCS_SINGLE"
                         , params=[0.001, 0.0001, 25., 0.000001]
                         , fixed=[0, 0, 1, 0])
     result = acffit.fit(xx[(1,1)].time, xx[(1,1)].correlations
