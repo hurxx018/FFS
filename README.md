@@ -8,3 +8,4 @@ The goal is to create a package in Python for analyzing photon count data.
 numpy, scipy
 
 lmfit (conda install -c newville lmfit)
+emcee (conda install -c astropy emcee)
