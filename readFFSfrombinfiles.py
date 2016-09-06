@@ -17,30 +17,38 @@ class readFFSfrombinfiles(readFFS):
     """
     def __init__(self, filenames=[], channels=[], frequency=0):
         readFFS.__init__(self, filenames, channels, frequency)
-        self.data = self.readFFSData()
+        self._data = self.readFFSData()
 
     def readFFSData(self):
-        if self.getFilenames() == []:
+        if self.filenames == []:
             return []
         else:
             data = []
-            for filename in self.getFilenames():
+            for filename in self.filenames:
                 with open(filename) as f:
                     temp_data = np.fromfile(f, dtype=np.int32)
                 data.append(temp_data)
             return data
 
+    @property
+    def filenames(self):
+        return self._filenames
 
-    def setFilenames(self, filenames):
-        readFFS.setFilenames(self, filenames)
-        self.data = self.readFFSData()
+    @filenames.setter
+    def filenames(self, filenames):
+        if isinstance(filenames, list):
+            self._filenames = filenames
+            self._data = self.readFFSData()
+        else:
+            raise TypeError("filenames is not a python list.")
 
 
-    def getData(self):
-        return self.data
+    @property
+    def data(self):
+        return self._data
 
 
-    def getInfo(self):
+    def getinfo(self):
         """
         Returns the information in the class
         """
@@ -49,7 +57,7 @@ class readFFSfrombinfiles(readFFS):
 
 
     def __str__(self):
-        for key, value in self.getInfo().items():
+        for key, value in self.getinfo().items():
             print("{0}  :   {1}".format(key, value))
         return ""
 
@@ -61,41 +69,41 @@ def main():
     filename3 = "A488_cal.3.001.bin"
     ffsdata = readFFSfrombinfiles([filename1], [1])
     print("filenames : ")
-    for x in ffsdata.getFilenames():
+    for x in ffsdata.filenames:
         print("  {}".format(x))
 
-    print("channels : ", ffsdata.getChannels())
-    print("n_channels: ", ffsdata.getNChannels())
+    print("channels : ", ffsdata.channels)
+    print("n_channels: ", ffsdata.nchannels)
     print("data :")
-    for data in ffsdata.getData():
+    for data in ffsdata.data:
         print(data[0:20])
 
     print("")
 
-    ffsdata.setFilenames([filename1, filename2])
-    ffsdata.setChannels([1, 2])
+    ffsdata.filenames = [filename1, filename2]
+    ffsdata.channels = [1, 2]
     print("filenames : ")
-    for x in ffsdata.getFilenames():
+    for x in ffsdata.filenames:
         print("  {}".format(x))
 
-    print("channels : ",ffsdata.getChannels())
-    print("n_channels: ", ffsdata.getNChannels())
+    print("channels : ",ffsdata.channels)
+    print("n_channels: ", ffsdata.nchannels)
     print("data :")
-    for data in ffsdata.getData():
+    for data in ffsdata.data:
         print(data[0:20])
 
     print("")
 
-    ffsdata.setFilenames([filename1, filename2, filename3])
-    ffsdata.setChannels([1, 2, 3])
+    ffsdata.filenames = [filename1, filename2, filename3]
+    ffsdata.channels = [1, 2, 3]
     print("filenames : ")
-    for x in ffsdata.getFilenames():
+    for x in ffsdata.filenames:
         print("  {}".format(x))
 
-    print("channels : ", ffsdata.getChannels())
-    print("n_channels: ", ffsdata.getNChannels())
+    print("channels : ", ffsdata.channels)
+    print("n_channels: ", ffsdata.nchannels)
     print("data :")
-    for data in ffsdata.getData():
+    for data in ffsdata.data:
         print(data[0:20])
 
 if __name__=="__main__":

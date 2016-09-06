@@ -16,53 +16,50 @@ class readFFS(object):
 
     def __init__(self, filenames=[], channels=[], frequency=1):
         if isinstance(filenames, list):
-            self.filenames = filenames
+            self._filenames = filenames
         else:
             raise TypeError("filenames is not a python list.")
 
         if isinstance(channels, list):
-            self.channels = channels
+            self._channels = channels
         else:
             raise TypeError("channels is not a python list.")
 
         if isinstance(frequency, int):
-            self.frequency = frequency
+            self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
 
+    @property
+    def filenames(self):
+        pass # defined in subclasses
 
-    def setFilenames(self, filenames):
-        if isinstance(filenames, list):
-            self.filenames = filenames
-        else:
-            raise TypeError("filenames is not a python list.")
+    @filenames.setter
+    def filenames(self, filenames):
+        pass # defined in subclasses
 
+    @property
+    def channels(self):
+        return self._channels
 
-    def setChannels(self, channels):
+    @channels.setter
+    def channels(self, channels):
         if isinstance(channels, list):
-            self.channels = channels
+            self._channels = channels
         else:
             raise TypeError("channels is not a python list.")
 
+    @property
+    def frequency(self):
+        return self._frequency
 
-    def setFrequency(self, frequency):
+    @frequency.setter
+    def frequency(self, frequency):
         if isinstance(frequency, int):
-            self.frequency = frequency
+            self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
 
-
-    def getFilenames(self):
-        return self.filenames
-
-
-    def getChannels(self):
-        return self.channels
-
-
-    def getNChannels(self):
-        return len(self.channels)
-
-
-    def getFrequency(self):
-        return self.frequency
+    @property
+    def nchannels(self):
+        return len(self._channels)
