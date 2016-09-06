@@ -45,13 +45,13 @@ class calfcsTransformer(object):
 
     def transform(self, X):
         if self.channels == []:
-            data = X.getData()
-            channels = X.getChannels()
-            frequency = X.getFrequency()
+            data = X.data
+            channels = X.channels
+            frequency = X.frequency
             result = self.calCorrelations(data, channels, frequency)
         else:
-            data = X.getData()
-            frequency = X.getFrequency()
+            data = X.data
+            frequency = X.frequency
             result = self.calCorrelations(data, self.channels, frequency)
         return result
 
@@ -130,7 +130,7 @@ class calfcsTransformer(object):
             return np.repeat(np.repeat(a, m // M, axis=0), n // N, axis=1)
 
 
-    def getInfo(self):
+    def getinfo(self):
         return {key:value for key, value in self.__dict__.items()
                          if not key.startswith('__') and not callable(key)}
 
@@ -149,13 +149,13 @@ def main():
     ffsdata = rffs.readFFSfrombinfiles([filename1, filename2, filename3], \
                                         [1,2,3], frequency=100000)
     print("filenames : ")
-    for x in ffsdata.getFilenames():
+    for x in ffsdata.filenames:
         print("  {}".format(x))
 
-    print("channels : ", ffsdata.getChannels())
+    print("channels : ", ffsdata.channels)
 
     cor = calfcsTransformer(channels=[1, 2])
-    print(cor.getInfo())
+    print(cor.getinfo())
     xx = cor.transform(ffsdata)
     print(xx)
 
