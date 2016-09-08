@@ -15,7 +15,7 @@ class readFFSfrombinfiles(readFFS):
     instance methods:
     readFFSData : read a data for each filename (32bit integer)
     """
-    def __init__(self, filenames=[], channels=[], frequency=0):
+    def __init__(self, filenames=[], channels=[], frequency=1):
         readFFS.__init__(self, filenames, channels, frequency)
         self._data = self.readFFSData()
 
