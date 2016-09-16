@@ -48,7 +48,7 @@ class readFFSfrombinfiles(readFFS):
         return self._data
 
 
-    def getinfo(self):
+    def info(self):
         """
         Returns the information in the class
         """
@@ -57,7 +57,7 @@ class readFFSfrombinfiles(readFFS):
 
 
     def __str__(self):
-        for key, value in self.getinfo().items():
+        for key, value in self.info().items():
             print("{0}  :   {1}".format(key, value))
         return ""
 
