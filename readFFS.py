@@ -29,6 +29,7 @@ class readFFS(object):
             self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
+        self._data = [None]*len(channels)
 
     @property
     def filenames(self):
@@ -59,6 +60,18 @@ class readFFS(object):
             self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
+
+    @property
+    def data(self):
+        return self._data
+    @data.setter
+    def data(self, data):
+        if not isinstance(data, list):
+            raise TypeError("The type of data is list.")
+        if len(data) != self.nchannels:
+            print("The number of channels is required to be {}".format(self.nchannels))
+            raise ValueError("The number of channels is not correct")
+        self._data = data
 
     @property
     def nchannels(self):

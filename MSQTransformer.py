@@ -57,8 +57,8 @@ class MSQTransformer(FFSTransformer):
                         .reshape((n_segments, self._segmentlength//binf))
             temp_k1 = np.mean(temp_data, axis=1)
             temp_k2 = np.mean((temp_data*temp_data), axis=1)
-
-            temp_q = temp_k2/temp_k1 - temp_k1 - 1.
+            index = temp_k1 > 0.
+            temp_q = temp_k2[index]/temp_k1[index] - temp_k1[index] - 1.
             qestimator[i] = np.mean(temp_q)
             if n_segments > 1:
                 qestimator_stderr[i] = np.std(temp_q)/np.sqrt(n_segments - 1)
