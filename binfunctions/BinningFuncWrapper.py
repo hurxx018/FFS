@@ -3,7 +3,12 @@ import numpy as np
 
 from scipy.interpolate import interp2d
 
-
+tableforB3 = "binfunctions/Binning_Func_B3_Table_For_Python"
+tableforB4 = "binfunctions/Binning_Func_B4_Table_For_Python"
+tableforB5 = "binfunctions/Binning_Func_B5_Table_For_Python"
+tableforB6 = "binfunctions/Binning_Func_B6_Table_For_Python"
+tableforB7 = "binfunctions/Binning_Func_B7_Table_For_Python"
+tableforB8 = "binfunctions/Binning_Func_B8_Table_For_Python"
 
 
 class BinningFuncWrapper(object):
@@ -25,14 +30,14 @@ class BinningFuncWrapper(object):
 
     def __init__(self, order):
         self._order = order
-        self._table = self.__loadtable(order)
-        self._interpolator = self.__createinterpolator(order)
-        self._fcn = self.__function(order)
+        self._table = self.loadtable(order)
+        self._interpolator = self.createinterpolator(order)
+        self._fcn = self.function(order)
 
     def calculate(self, t, r, td):
-        return self.fcn(t, r, td)
+        return self._fcn(t, r, td)
 
-    def __function(self, order):
+    def function(self, order):
         if order == 0:
             return self.Binning_Func_B0
         elif order == 1:
@@ -54,26 +59,28 @@ class BinningFuncWrapper(object):
                 *np.log(((-1.0+2.*r-2.*np.sqrt((-1.+r)*r))*(np.sqrt((-1.+r)*td) \
                 +np.sqrt(r*td+t)))                                          \
                 /(-np.sqrt((-1.+r)*td) + np.sqrt(r*td+t))))/(2.*np.sqrt((-1.+r)/r)))
-        return td**2. * result
+        return np.power(td, 2) * result
     # TO DO
     def Binning_Func_B3(self, t, r, td):
         # = 0.001
         # = 0.01
         #
         result = 0
-        return td**3. * result
+        return np.power(td, 3.) * result
 
 
-    def __loadtable(self, order):
+    def loadtable(self, order):
 
         if order in [0, 1, 2]:
             return None
         elif order == 3:
             #TO DO: how to read Binning_Func_B3_Table_For_Python
             #       which is in the same folder of BinningFuncWrapper
-            temp_table = np.fromfile("C:\\Users\\MLab\\Google Drive\\Python Application\FFS\\binfunctions\\Binning_Func_B3_Table_For_Python")
-
-            return temp_table
+            with open(tableforB3, "r") as f:
+                # TO DO: reshape the table
+                return np.fromfile(f, dtype=np.double).reshape(8001, 401)
+        elif order == 4:
+            return 0
 
 
 
@@ -83,7 +90,7 @@ class BinningFuncWrapper(object):
 
     @fcn.setter
     def fcn(self, order):
-        self._fcn = self.__function(order)
+        self._fcn = self.function(order)
 
     @property
     def table(self):

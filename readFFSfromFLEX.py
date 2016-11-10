@@ -41,7 +41,7 @@ class readFFSfromFLEX(readFFS):
 
             if len(self.channels) == 1:
                 data = [temp_data]
-            if len(self.channels) == 2:
+            elif len(self.channels) == 2:
                 temp_data = (temp_data.reshape(temp_data.size//2, 2)
                                       .T)
                 data = [temp_data[0], temp_data[1]]
