@@ -1,8 +1,8 @@
 import numpy as np
-from readFFS import readFFS
+from tmdata import tmdata
 
 
-class readFFSfromFLEX(readFFS):
+class readFFSfromFLEX(tmdata):
     """Read FFS data from dat files obtained by the FLEX card.
 
     input variables:
@@ -21,9 +21,11 @@ class readFFSfromFLEX(readFFS):
 
     """
     def __init__(self, filenames=[], channels=[], frequency=1, bit=8):
-        readFFS.__init__(self, filenames, channels, frequency)
+        super(readFFSfromFLEX, self).__init__(filenames, channels, frequency)
+        #readFFS.__init__(self, filenames, channels, frequency)
         self._bit = bit
         self._data = self.readFFSData()
+        self._checkdata()
 
     def readFFSData(self):
         if self.filenames == []:
@@ -58,12 +60,9 @@ class readFFSfromFLEX(readFFS):
         if isinstance(filenames, list):
             self._filenames = filenames
             self._data = self.readFFSData()
+            self._checkdata()
         else:
             raise TypeError("filenames is not a python list.")
-
-    @property
-    def data(self):
-        return self._data
 
     @property
     def bit(self):

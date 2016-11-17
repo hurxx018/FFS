@@ -1,7 +1,7 @@
 import numpy as np
-from readFFS import readFFS
+from tmdata import tmdata
 
-class readFFSfrombinfiles(readFFS):
+class readFFSfrombinfiles(tmdata):
     """
     Read FFS data from bin files (###.bin) which are collected at timemode
     input variables:
@@ -16,8 +16,10 @@ class readFFSfrombinfiles(readFFS):
     readFFSData : read a data for each filename (32bit integer)
     """
     def __init__(self, filenames=[], channels=[], frequency=1):
-        readFFS.__init__(self, filenames, channels, frequency)
+        super(readFFSfrombinfiles, self).__init__(filenames, channels, frequency)
+        #tmdata.__init__(self, filenames, channels, frequency)
         self._data = self.readFFSData()
+        self._checkdata()
 
     def readFFSData(self):
         if self.filenames == []:
@@ -39,14 +41,9 @@ class readFFSfrombinfiles(readFFS):
         if isinstance(filenames, list):
             self._filenames = filenames
             self._data = self.readFFSData()
+            self._checkdata()
         else:
             raise TypeError("filenames is not a python list.")
-
-
-    @property
-    def data(self):
-        return self._data
-
 
     def info(self):
         """
