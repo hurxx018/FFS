@@ -1,5 +1,6 @@
 import numpy as np
 from zscan_tools.zscanPSFGLsp import zscanPSFGLsp
+from zscan_tools.zscanMultiLayer import zscanMultiLayer
 from mpfit.mpfit3 import mpfit
 
 
@@ -15,7 +16,7 @@ class zscanFitter(object):
     # 3DG : zR, w0
     # GL  : zR, w0
     psfdict = {"mGL":3, "3DG":1, "GL":0}
-
+    psf_nparasdict = {"mGL":3, "3DG":2, "GL":2}
 
 
     def __init__(self, psfmodel="mGL", zoffset=None, channels=[1]):
@@ -108,30 +109,35 @@ class zscanFitter(object):
             errkz = self.getErrkz(kz)
 
         # TODO
-        x = [z]*len(self.channels) # TODO >> flatten
+        x = z #[z]*len(self.channels) # TODO >> flatten
         y = kz # TODO >> flatten
         yerr = errkz # TODO >> flatten
-
-        paras, fitinfo, fixed = self._generateparas()
+        yerr = np.sqrt(y[0]+1.)
+        paras, fixed, fitinfo = self._generateparas()
         # see docstring in _generateparas to know what paras, fitinfo, and fixed
         # are.
         print("paras : ", paras)
-        print("fitinfo : ", "not available yet")
         print("fixed : ", fixed)
-        raise RuntimeError()
+        print("fitinfo : ", fitinfo)
+
+        # return self.kzMultiLayerFCT(z, paras, info=fitinfo)
+        # raise RuntimeError()
 
         parinfo = [{'value':v, 'fixed':f, 'limited':[1,0], 'limits':[0.,0.]}
          								for v, f in zip(paras, fixed)]
 
         # TODO consider extra features in myfunct
         def myfunct(p, fjac=None, x=None, y=None, err=None, info=None):
-            model =  self.kzMultiLayerFCT(x, p, fitinfo=info)
+            model =  self.kzMultiLayerFCT(x, p, info=info)
             status = 0
             return [status, (y-model)/err]
 
-        fa = {"x":x, "y":y, "err":yerr, "info":fitinfo}
-        mpfit(myfunct, a, functkw=fa, parinfo=parinfo, maxiter=300, quiet=1)
-
+        fa = {"x":x, "y":y[0], "err":yerr, "info":fitinfo}
+        print(fa)
+        RuntimeError()
+        zz = mpfit(myfunct, paras, functkw=fa, parinfo=parinfo, maxiter=300, quiet=1)
+        print(zz)
+        RuntimeError()
         pass
 
     def _checkpsfmodel(self, psfparas, fixed):
@@ -335,9 +341,10 @@ class zscanFitter(object):
 
     def _generateparas(self):
         """
-        paras = [psfparas, offset, layer[0]_paras, layer[1]_paras, ......]
-        fitinfo
+        paras = [psfparas for channel 1, (psfparas for channel 2, psfparas for channel 3),
+                offset, layer[0]_paras, layer[1]_paras, ......]
         fixed =
+        fitinfo = {"nch":#, "psfmodel":#, "n_psfparas":#, "geo":[]}
         """
         for cha in self._channels:
             if self._isPSFEmpty(cha):
@@ -347,10 +354,17 @@ class zscanFitter(object):
         if self._isZoffsetEmpty():
             raise ValueError("zoffset para is not available.")
 
-        paras, fitinfo, fixed = [], [], []
+        paras, fixed, fitinfo = [], [], {}
+        nch = 0
         for channel in sorted(self._psf.keys()):
             paras += self._psf[channel]
             fixed += self._psffixed[channel]
+            nch += 1
+        fitinfo["nch"] = nch
+        fitinfo["psfmodel"] = self.psfdict[self._psfmodel]
+        fitinfo["n_psfparas"] = self.psf_nparasdict[self._psfmodel]
+
+        fitinfo["geo"] = []
         paras += [self._zoffset]
         fixed += [0]
         para_names, fpara_names = self._paranames()
@@ -359,7 +373,11 @@ class zscanFitter(object):
             ftemp = [j[k] for k in fpara_names]
             paras.extend(temp)
             fixed.extend(ftemp)
-        return np.array(paras).flatten(), fitinfo, fixed
+            fitinfo["geo"] += [self.geodict[i["geo"]]]
+
+        fitinfo["spillover"] = self._spillover
+
+        return np.array(paras).flatten(), fixed, fitinfo
 
     # def kzfct(self, channel=1):
     #     self._geoinfo
@@ -375,7 +393,36 @@ class zscanFitter(object):
             parasPSf, zoffset, model are reconstituted for zscanMultiLayer.
 
         """
-        pass
+        result = np.zeros(z.size)  # z.size / nch
+
+        nch = info["nch"]
+        np = info["n_psfparas"]
+
+        psfparas = []
+        for i in range(nch):
+            psfparas.append(paras[0 + i*np: np + i*np])
+        zoff = paras[np*nch]
+
+        nparas = {1:2, 2:3, 3:4}   # nparas[nch] == len(self._paranames()[0])
+
+        geomodels = [[] for x in range(nch)]
+        for x in range(len(info["geo"])):
+            temp = paras[np*nch + 1 + nparas[nch]*x
+                            :np*nch + nparas[nch] + 1 + nparas[nch]*x]
+            geomodels[0].append({"geo":info["geo"][x], "k":temp[0], "LR":temp[nparas[nch]-1]})
+            if nch == 2:
+                geomodels[1].append({"geo":info["geo"][x], "k":temp[0], "LR":temp[nparas[nch]-1]})
+            elif nch == 3:
+                geomodels[1].append({"geo":info["geo"][x], "k":temp[1], "LR":temp[nparas[nch]-1]})
+                geomodels[2].append({"geo":info["geo"][x], "k":temp[2], "LR":temp[nparas[nch]-1]})
+
+        # TODO zscan profiles for multiple channel
+        for i in range(nch):
+            pass
+            # TODO take into account the spillover.
+        temp = zscanMultiLayer(z, zoff, psfparas[0], model=geomodels[0], psfmodel=info["psfmodel"])
+        return temp
+
 
 
     def _isPSFEmpty(self, channel):
@@ -431,7 +478,6 @@ class zscanFitter(object):
     def spillover(self):
         return self._spillover
 
-
     @classmethod
     def printgeodict(cls):
         temp = sorted(cls.geodict.items(), key= (lambda x:x[1]))
@@ -446,22 +492,24 @@ def main():
     data = ffs(["zscan_slab_egfp.dat"], [1, 2], 20000)
     temp_zscan = zscan(channels=[2], slice_zscans = True)
     res = temp_zscan.transform(data)
-    #print(res)
+
+    zscanfit = zscanFitter(psfmodel="mGL", zoffset=13., channels=[1])
+    zscanfit.setPSF(channel=1, psfparas=[1., 2., 0.45], fixed=[0, 0, 0])
+    print("psf :", zscanfit.getPSF())
+    #zscanfit.addLayer("DOWN")
+    zscanfit.setLayer("DOWN", [1., 0.], [0, 1])
+    zscanfit.setLayer(0, [1300., 1.], [0, 0])
+    zscanfit.setLayer("UP", [1., 0.], [0, 1])
+    #zscanfit.setLayer("UP", [5., 5.], [0, 0], layer_index=1)
+
+    xx = zscanfit.fit(res[0], [res[2][0]])
+
     for x in res[2]:
         plt.plot(res[0], x)
+    plt.plot(res[0], xx)
     plt.xlabel('z (um)')
     plt.ylabel('counts per {} bins'.format(temp_zscan.nbins))
     plt.show()
 
-    zscanfit = zscanFitter(psfmodel="mGL", zoffset=20., channels=[1])
-    zscanfit.setPSF(channel=1, psfparas=[1., 2., 0.45], fixed=[0, 0, 0])
-    print("psf :", zscanfit.getPSF())
-    #zscanfit.addLayer("DOWN")
-    zscanfit.setLayer("DOWN", [1., 0.], [0, 0])
-    zscanfit.setLayer(0, [5., 5.], [1, 1])
-    zscanfit.setLayer("UP", [1., 0.], [0, 0])
-    #zscanfit.setLayer("UP", [5., 5.], [0, 0], layer_index=1)
-
-    zscanfit.fit(res[0], [res[2][0]])
 if __name__=="__main__":
     main()

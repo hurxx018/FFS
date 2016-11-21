@@ -51,6 +51,12 @@ class zscanTransformer(object):
 
     def calkz(self, data, channels, ffsfrequency):
         result = {'zscan_k':1, 'slice':self._slice_zscans}
+        """
+        result[0]  >> z
+        result[1]  >> kz for the channel 1
+        result[2]  >> kz for the channel 2 if available
+        and so on.
+        """
         for i in channels:
             if self._slice_zscans:
                 # slice kz into mutiple pieces rather than a long kz

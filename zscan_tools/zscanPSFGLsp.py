@@ -7,16 +7,16 @@ def erfapprox(x):
     a = 0.14001229
     x2 = np.power(x, 2)
     q = (4./np.pi + a*x2) / (1. + a*x2)
-    sgnx = (x > 0)* - 1
+    sgnx = (x > 0)*2 - 1
     return sgnx * np.sqrt(1. - np.exp(-x2 * q))
 
 def volPSFGLspCylinderGeoIntegrand(zeta, dz, r2, b, s):
     #; p = {dz:dz, R2:R2, b:b, s:s}
     zeta2p1 = 1. + np.power(zeta, 2)
-    #return, erf(2.*b*np.sqrt(r2-np.power(dz + zeta, 2))/np.sqrt(zeta2p1)) \
-    #            / np.power(zeta2p1, s)
-    return erfapprox(2.*b*np.sqrt(r2- np.power(dz + zeta, 2))/np.sqrt(zeta2p1)) \
-            / np.power(zeta2p1, s)
+    return erf(2.*b*np.sqrt(r2-np.power(dz + zeta, 2))/np.sqrt(zeta2p1)) \
+               / np.power(zeta2p1, s)
+    # return erfapprox(2.*b*np.sqrt(r2- np.power(dz + zeta, 2))/np.sqrt(zeta2p1)) \
+    #         / np.power(zeta2p1, s)
 
 def volPSFGLspCylinderGeo(parasPSF, dz, R, absolute=False):
     """
@@ -45,7 +45,7 @@ def volPSFGLspCylinderGeo(parasPSF, dz, R, absolute=False):
     """
     zR  = np.float64(parasPSF[0])
     y   = np.float64(parasPSF[1])
-    b   = np.float64(parasPSF[0])/np.float64(parasPSF[2]) beam waist ratio b=zR/w0
+    b   = np.float64(parasPSF[0])/np.float64(parasPSF[2]) #beam waist ratio b=zR/w0
     fac = gamma(y)/gamma(y - 0.5)/np.sqrt(np.pi)
 
     if absolute:
@@ -97,7 +97,7 @@ def volPSFsqrGLspCylinderGeo(parasPSF, dz, R, absolute=False):
     """
     zR  = np.float64(parasPSF[0])
     y   = np.float64(parasPSF[1])
-    b   = np.float64(parasPSF[0])/np.float64(parasPSF[2]) beam waist ratio b=zR/w0
+    b   = np.float64(parasPSF[0])/np.float64(parasPSF[2]) #beam waist ratio b=zR/w0
     fac = 0.5*gamma(y)/gamma(y - 0.5)/np.sqrt(np.pi)
 
     if absolute:
@@ -389,13 +389,13 @@ def zscanPSFGLsp(z, parasPSF, parasGEO, geo=None, absolute=False):
     elif geometry == 2:
         vol = volPSFGLsp(parasPSF, 0, -zPSF, geo = geometry, absolute = absolute)
     elif geometry == 3:
-        vol = volPSFGLsp(parasPSF, zPSF, geo = geometry, absolute = absolute)
+        vol = volPSFGLsp(parasPSF, zPSF, None, geo = geometry, absolute = absolute)
     elif geometry == 4:
-        R   = parasGeo[1]
+        R = parasGEO[1]
         vol = volPSFGLspSphereGeo(parasPSF, zPSF, R, absolute = absolute)
     elif geometry == 5:
-        R   = parasGeo[1]
-        vol = VolPSFGLspCylinderGeo(parasPSF, zPSF,R, absolute = absolute)
+        R = parasGEO[1]
+        vol = volPSFGLspCylinderGeo(parasPSF, zPSF, R, absolute = absolute)
     else:
         raise ValueError("geometry is not available.")
 

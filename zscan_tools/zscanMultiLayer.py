@@ -1,14 +1,15 @@
+from zscan_tools.zscanPSFGLsp import zscanPSFGLsp
 import numpy as np
 
 
-def zscanPSF(z, parasPSF, parasGEO, geo=None, psfmodel=None, order=None):
+def zscanPSF(z, parasPSF, parasGEO, geo=0, psfmodel=3, order=1):
     """
     calculate the normalized PSF volume of a PSF model (mGL, 3DG, GL)
         scanned through a sample
 
     z          z values (vector)
-    parasPSF   [zR,y]    = (axial waist, y           for GEO = {0,1,2,3})
-    parasPSF   [zR,y,b]  = (axial waist, y, b=zR/w0  for GEO = {4, 5})
+    parasPSF   [zR, y , w0]    = (axial waist, y, radia waist) for GEO = {0,1,2,3,4,5}
+    // parasPSF   [zR,y,b]  = (axial waist, y, b=zR/w0  for GEO = {4, 5}) : Obsolete
 
     parasGEO   [zoff, L] = (z-offset to center of slab, Length of slab) if GEO =   0 = Slab
     parasGEO   [zoff   ] = (z-offset to beginning of SemiInfinite Slab) if Geo =   1 = SemiInfiniteUp
@@ -43,19 +44,13 @@ def zscanPSF(z, parasPSF, parasGEO, geo=None, psfmodel=None, order=None):
     1 = 3DG,
     2 = hybrid
     3 = GL special
-    4 = GL special (for spherical and cylindrical geometry)
+    // 4 = GL special (for spherical and cylindrical geometry) : Obsolete
 
     ORDER:         2 = squared, 1 = linear       (default = 1)
 
     RETURN
     volume of PSF as a function of zexp
     """
-    if geo == None:
-        geo = 0
-    if psfmodel == None:
-        psfmodel = 3
-    if order == None:
-        order = 1
 
     if order == 1:
         if geo < 10:
@@ -66,9 +61,9 @@ def zscanPSF(z, parasPSF, parasGEO, geo=None, psfmodel=None, order=None):
             elif psfmodel == 2:
                 pass
             elif psfmodel == 3:
-                pass
-            elif psfmodel == 4:
-                pass
+                vol = zscanPSFGLsp(z, parasPSF, parasGEO, geo=geo, absolute=False)
+            else:
+                raise ValueError("psf model is not available.")
         elif 10 <= geo < 15:
             pass
         elif 20 <= geo <= 25:
@@ -81,18 +76,44 @@ def zscanPSF(z, parasPSF, parasGEO, geo=None, psfmodel=None, order=None):
     else:
         raise ValueError("The value of order is not allowed")
 
-    return (vol=0)
+    return vol
 
 
 
-
-
-
-
-def zscanMultiLayer(z, zoff, parasPSF, model=[], psfmodel="mGL"):
+def zscanMultiLayer(z, zoff, parasPSF, model=[], psfmodel=3):
+    if not isinstance(z, np.ndarray):
+        raise TypeError("z is not a numpy array")
     if model == []:
         raise ValueError("No model is applied.")
+    elif not isinstance(model, list):
+        raise ValueError("The type of model is wrong.")
 
-    for x in model:
+    nlayers = len(model)
+    volz = np.zeros( (nlayers, z.size) )
+    # vol2z = np.zeros(nlayers, z.size)
+    LR = np.zeros(nlayers, dtype=float)
+    intensity = np.zeros(nlayers, dtype=float)
+    # brightness = np.zeros(nalyers, dtype=float)
+    zx = zoff
 
-        if x.
+    for i, x in enumerate(model):
+        geo = x['geo']
+        intensity[i] = x['k']
+        # brightness[i] = x['b']
+        if geo == 0:
+            LR[i] = x['LR']
+            parasGEO = [zx + LR[i]/2., LR[i]]
+            zx = zx + LR[i]
+        elif geo in (1, 2, 3):
+            parasGEO = [zx]
+        elif geo in (4, 5):
+            LR[i] = x['LR']
+            parasGEO = [zx, LR[i]]
+            zx = zx + LR[i]
+        elif geo in (10, 14, 15, 24, 25):
+            LR[i] = LR[i-1] # previous layer has to define slab length
+            parasGEO = [zx - LR[i], LR[i]]
+        else:
+            raise ValueError("model is not available")
+        volz[i, :] = zscanPSF(z, parasPSF, parasGEO, geo=geo, psfmodel=psfmodel, order=1)
+    return intensity.dot(volz)
