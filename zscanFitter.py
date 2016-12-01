@@ -90,10 +90,17 @@ class zscanFitter(object):
 
     @staticmethod
     def getErrkz(kz):
-        # TODO calculate the error for kz.
-        #pass
-        return 0
-
+        """Calculate the error for kz.
+        sqrt(phton count) is equal to the error of photon count due to the shot
+        noise.
+        """
+        if not isinstance(kz, list):
+            raise TypeError("The input kz is not list")
+        res = [np.sqrt(x) for x in kz]
+        for x in res:
+            index = (x == 0)
+            x[index] += 1.
+        return res
 
     def fit(self, z, kz=[], errkz=None):
         """fit zscan intensity profiles of multi-channel with a single geometric
@@ -109,19 +116,12 @@ class zscanFitter(object):
             errkz = self.getErrkz(kz)
 
         # TODO
-        x = z #[z]*len(self.channels) # TODO >> flatten
-        y = kz # TODO >> flatten
-        yerr = errkz # TODO >> flatten
-        yerr = np.sqrt(y[0]+1.)
+        x = z
+        y = np.array(kz).flatten()
+        yerr = np.array(errkz).flatten()
         paras, fixed, fitinfo = self._generateparas()
         # see docstring in _generateparas to know what paras, fitinfo, and fixed
         # are.
-        print("paras : ", paras)
-        print("fixed : ", fixed)
-        print("fitinfo : ", fitinfo)
-
-        # return self.kzMultiLayerFCT(z, paras, info=fitinfo)
-        # raise RuntimeError()
 
         parinfo = [{'value':v, 'fixed':f, 'limited':[1,0], 'limits':[0.,0.]}
          								for v, f in zip(paras, fixed)]
@@ -132,13 +132,10 @@ class zscanFitter(object):
             status = 0
             return [status, (y-model)/err]
 
-        fa = {"x":x, "y":y[0], "err":yerr, "info":fitinfo}
-        print(fa)
-        RuntimeError()
-        zz = mpfit(myfunct, paras, functkw=fa, parinfo=parinfo, maxiter=300, quiet=1)
-        print(zz)
-        RuntimeError()
-        pass
+        fa = {"x":x, "y":y, "err":yerr, "info":fitinfo}
+        res = mpfit(myfunct, paras, functkw=fa, parinfo=parinfo, maxiter=300, quiet=1)
+        yfit = self.kzMultiLayerFCT(x, res.params, info=fitinfo)
+        return res, yfit
 
     def _checkpsfmodel(self, psfparas, fixed):
         if self._psfmodel == "mGL":
@@ -396,19 +393,23 @@ class zscanFitter(object):
         result = np.zeros(z.size)  # z.size / nch
 
         nch = info["nch"]
-        np = info["n_psfparas"]
+        n_psfp0 = info["n_psfparas"]
 
         psfparas = []
         for i in range(nch):
-            psfparas.append(paras[0 + i*np: np + i*np])
-        zoff = paras[np*nch]
+            psfparas.append(paras[0 + i*n_psfp0: n_psfp0 + i*n_psfp0])
+        zoff = paras[n_psfp0*nch]
 
         nparas = {1:2, 2:3, 3:4}   # nparas[nch] == len(self._paranames()[0])
+        if nch == 2:
+            spo = ['f12']
+        elif nch == 3:
+            spo = ['f12', 'f13', 'f23']
 
         geomodels = [[] for x in range(nch)]
         for x in range(len(info["geo"])):
-            temp = paras[np*nch + 1 + nparas[nch]*x
-                            :np*nch + nparas[nch] + 1 + nparas[nch]*x]
+            temp = paras[n_psfp0*nch + 1 + nparas[nch]*x
+                            :n_psfp0*nch + nparas[nch] + 1 + nparas[nch]*x]
             geomodels[0].append({"geo":info["geo"][x], "k":temp[0], "LR":temp[nparas[nch]-1]})
             if nch == 2:
                 geomodels[1].append({"geo":info["geo"][x], "k":temp[0], "LR":temp[nparas[nch]-1]})
@@ -416,13 +417,28 @@ class zscanFitter(object):
                 geomodels[1].append({"geo":info["geo"][x], "k":temp[1], "LR":temp[nparas[nch]-1]})
                 geomodels[2].append({"geo":info["geo"][x], "k":temp[2], "LR":temp[nparas[nch]-1]})
 
-        # TODO zscan profiles for multiple channel
-        for i in range(nch):
-            pass
+        if nch == 1:
+            return zscanMultiLayer(z, zoff, psfparas[0], model=geomodels[0], psfmodel=info["psfmodel"])
+        else:
+            # TODO zscan profiles for multiple channel
             # TODO take into account the spillover.
-        temp = zscanMultiLayer(z, zoff, psfparas[0], model=geomodels[0], psfmodel=info["psfmodel"])
-        return temp
-
+            res = []
+            for i in range(nch):
+                t = zscanMultiLayer(z, zoff, psfparas[i], model=geomodels[i], psfmodel=info["psfmodel"])
+                if i == 0:
+                    res.append(t)
+                elif i == 1:
+                    a = info["spillover"][spo[0]]
+                    t += a*res[0]
+                    res.append(t)
+                elif i == 2:
+                    a = info["spillover"][spo[1]]
+                    b = info["spillover"][spo[2]]
+                    res.append()
+            temp = np.hstack(res)
+            # print(temp)
+            return temp
+            # return np.concatenate(res, axis=1)
 
 
     def _isPSFEmpty(self, channel):
@@ -495,21 +511,52 @@ def main():
 
     zscanfit = zscanFitter(psfmodel="mGL", zoffset=13., channels=[1])
     zscanfit.setPSF(channel=1, psfparas=[1., 2., 0.45], fixed=[0, 0, 0])
-    print("psf :", zscanfit.getPSF())
+    # print("psf :", zscanfit.getPSF())
     #zscanfit.addLayer("DOWN")
     zscanfit.setLayer("DOWN", [1., 0.], [0, 1])
     zscanfit.setLayer(0, [1300., 1.], [0, 0])
     zscanfit.setLayer("UP", [1., 0.], [0, 1])
     #zscanfit.setLayer("UP", [5., 5.], [0, 0], layer_index=1)
 
-    xx = zscanfit.fit(res[0], [res[2][0]])
-
-    for x in res[2]:
-        plt.plot(res[0], x)
-    plt.plot(res[0], xx)
+    zz, yfit = zscanfit.fit(res[0], [res[2][0]])
+    print(zz.params)
+    # for x in res[2]:
+    #     plt.plot(res[0], x)
+    plt.plot(res[0], res[2][0])
+    plt.plot(res[0], yfit, 'r')
     plt.xlabel('z (um)')
     plt.ylabel('counts per {} bins'.format(temp_zscan.nbins))
     plt.show()
+
+
+    temp_zscan = zscan(channels=[1, 2], slice_zscans = True)
+    res = temp_zscan.transform(data)
+    # for x, y in zip(res[2], res[1]):
+    #     plt.plot(res[0], x)
+    #     plt.plot(res[0], y)
+    plt.plot(res[0], res[2][0])
+    plt.plot(res[0], res[1][0])
+    plt.show()
+
+    zscanfit_dual = zscanFitter(psfmodel="mGL", zoffset=13., channels=[1,2])
+    zscanfit_dual.setPSF(channel=1, psfparas=[1., 2., 0.45], fixed=[0, 0, 0])
+    zscanfit_dual.setPSF(channel=2, psfparas=[1., 2., 0.45], fixed=[0, 0, 0])
+    zscanfit_dual.setSpillover([1./8.])
+    zscanfit_dual.setLayer("DOWN", [1., 1., 0.], [0, 0, 1])
+    zscanfit_dual.setLayer(0, [1300., 400., 1.], [0, 0, 0])
+    zscanfit_dual.setLayer("UP", [1., 1., 0.], [0, 0, 1])
+
+    zz, yfit = zscanfit_dual.fit(res[0], [res[2][0], res[1][0]])
+    print(zz.params)
+    v = yfit.reshape((2, res[0].size))
+    print(v)
+    print(v.shape)
+    plt.plot(res[0], res[2][0])
+    plt.plot(res[0], res[1][0])
+    plt.plot(res[0], v[0], 'r')
+    plt.plot(res[0], v[1], 'r')
+    plt.show()
+
 
 if __name__=="__main__":
     main()
