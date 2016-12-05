@@ -2,92 +2,81 @@
 class FFSFitter(object):
     """a superclass for Fitters of FFS analysis
 
-    inputs:
-    analysis = "FCS", "TIFCA", "TSFCA" and so on
-
-    model:
-    (1) FCS analysis >> "2DG_FCS_SINGLE"
-    (2) TIFCA analysis >>
-    (3) TSFCA analysis >>
-
     """
+    dic_models = {}
+    dic_nparas = {}
 
-    def __init__(self, analysis="", model="", method=""):
-        self._analysis = analysis
+    def __init__(self, model="", channels=[], paras=[], fixed=[]):
         self._model = model
-        self._method = method
+        self._channels = channels
+        self._paras = paras
+        self._fixed = fixed
+        self._fct = None
 
+    def getmodelfct(self):
+        """get a model function"""
+        return self._fct
 
-    @property
-    def analysis(self):
-        """A type of FFS anaysis"""
-        return self._analysis
+    def _choosemodel(self, model):
+        return self.dic_models[model]
 
-    @analysis.setter
-    def analysis(self, value):
-        self._analysis = value
+    def _checkmodel(self, model):
+        if model not in self.dic_models:
+            for key in sorted(self.dic_models):
+                print("Use {} for {}".format(key, self.dic_models[key].__name__))
+            print("")
+            raise ValueError("{} model is not available.".format(model))
 
+    def _checkvalues(self, name, value):
+        if not isinstance(value, (list, tuple)):
+            raise TypeError("the type of {} is neither a list or a tuple".format(name))
+        np = self.dic_nparas[self._model]
+        if len(value) != np:
+            raise ValueError("The number of elements in {} should be {} \
+            for the MSQ model {}.".format(name, np, self._model))
+
+    def info(self):
+        return {key:value for key, value in self.__dict__.items()
+                         if not key.startswith('__') and not callable(key)}
+
+    def __str__(self):
+        for key, value in self.info().items():
+            print("{0}  :  {1}".format(key[1:], value))
+        return ""
 
     @property
     def model(self):
-        """Fit model for Fitter"""
         return self._model
-
     @model.setter
     def model(self, value):
+        self._checkmodel(value)
         self._model = value
-
+        self._fct = self._choosemodel(model)
 
     @property
-    def method(self):
+    def channels(self):
         """Fit method for Fitter"""
-        return self._method
+        return self._channels
 
-    @method.setter
-    def method(self, value):
-        self._method = value
+    @channels.setter
+    def channels(self, value):
+        if isinstance(value, (list, tuple)):
+            self._channels = value
+        else:
+            raise TypeError("the type of channels is neither a list or a tuple")
 
+    @property
+    def paras(self):
+        return self._paras
+    @paras.setter
+    def paras(self, value):
+        self._checkvalues("paras", value)
+        self._paras = value
 
-    # def setModel(self, model):
-    #     self.model = model
-    #     return
-    #
-    #
-    # def setParams(self, params):
-    #     self.params = params
-    #     return
-    #
-    #
-    # def setFixed(self, fixed):
-    #     self.fixed = fixed
-    #     return
-    #
-    #
-    # def setBounds(self, bounds):
-    #     self.bounds = bounds
-    #     return
-    #
-    #
-    # def setMethod(self, method):
-    #     self.method = method
-    #     return
-    #
-    #
-    # def getModel(self):
-    #     return self.model
-    #
-    #
-    # def getParams(self):
-    #     return self.params
-    #
-    #
-    # def getFixed(self):
-    #     return self.fixed
-    #
-    #
-    # def getBounds(self):
-    #     return self.bounds
-    #
-    #
-    # def getMethod(self):
-    #     return self.method
+    @property
+    def fixed(self):
+        return self._fixed
+    @fixed.setter
+    def fixed(self, value):
+        self._checkvalues("fixed", value)
+        self._fixed = value
