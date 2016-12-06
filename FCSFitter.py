@@ -9,7 +9,7 @@ class FCSFitter(FFSFitter):
     data
 
     """
-    dic_models = {"2DG":0, "3DG":2}
+    dic_models = {"2DG":fcs_models.acf2dg, "3DG":fcs_models.acf3dg}
     dic_nparas = {"2DG":3, "3DG":4}
 
     def __init__(self, model="2DG",
@@ -23,7 +23,7 @@ class FCSFitter(FFSFitter):
         super(FCSFitter, self).__init__(model, channels)
         self.setModel(model, paras, fixed)
 
-    def fit(self, t, g, gerr, tsampling):
+    def fit(self, t, g, gerr, tsampling=1):
         try:
             super(FCSFitter, self)._checkvalues("paras", self._paras)
             super(FCSFitter, self)._checkvalues("fixed", self._fixed)
@@ -41,14 +41,14 @@ class FCSFitter(FFSFitter):
          					for v, f in zip(self._paras, self._fixed)]
 
         def myfunct(p, fjac=None, x=None, y=None, err=None, info=None):
-            model =  self._fct(x, p, tsampling=info["tsampling"])
+            model =  self._fct(x, p) #, tsampling=info["tsampling"]
             status = 0
             return [status, (y-model)/err]
 
         fa = {"x":x, "y":y, "err":yerr, "info":fitinfo}
-        # res = mpfit(myfunct, self._paras, functkw=fa, parinfo=parinfo, maxiter=1000, \
-        #             quiet=1)
-        yfit = self._fct(x, res.params, tsampling=fitinfo["tsampling"])
+        res = mpfit(myfunct, self._paras, functkw=fa, parinfo=parinfo, maxiter=1000, \
+                    quiet=1)
+        yfit = self._fct(x, res.params) #, tsampling=fitinfo["tsampling"]
         dof = y.size - len(self._paras) + sum(self._fixed)
         redchi2 = (np.power(y - yfit, 2)/np.power(yerr, 2)).sum()/dof
         return res, yfit, redchi2
@@ -64,10 +64,26 @@ class FCSFitter(FFSFitter):
         self._fixed = fixed
 
 def main():
-    a = FCSFitter()
-    print(a)
-    b = FCSFitter('3DG', [1], [0.01, 0.001, 25., 0], [0,0,0,0])
-    print(b)
+    from readFFSfrombinfiles import readFFSfrombinfiles
+    from FCSTransformer import FCSTransformer
+    import matplotlib.pyplot as plt
+
+    filenames=["A488_cal.2.001.bin"]
+    data = readFFSfrombinfiles(filenames, channels=[1], frequency=100000)
+    fcs = FCSTransformer()
+    x = fcs.transform(data)
+    fitter = FCSFitter(model="2DG", channels=[1], paras=[0.01, 0.0001, 0.], fixed=[0,0,1])
+
+    # z0, z1, z2 = fitter.fit(x[(1,1)][0]*100000, x[(1,1)][1], x[(1,1)][2], data.sampletime)
+    # z0, z1, z2 = fitter.fit(x[(0,0)], x[(1,1)][0], x[(1,1)][1], 1)
+    z0, z1, z2 = fitter.fit(x[(0,0)], x[(1,1)][0], x[(1,1)][1])
+    print(z0.params)
+    print(z2)
+    plt.plot(x[(0,0)], x[(1,1)][0])
+    plt.plot(x[(0,0)], z1)
+    plt.xscale("log")
+    plt.show()
+
 
 if __name__ == "__main__":
     main()

@@ -1,28 +1,40 @@
 import collections
 import numpy as np
 
+from tmdata import tmdata
 from FFSTransformer import FFSTransformer
 
 class MSQTransformer(FFSTransformer):
     """Calculate mean of segmented Q values
 
     """
-    def __init__(self, segmentlength=32768*4
+    CYCLE = 32768   # default FFS data chunk size for saving data from old acquistion card
+    DATACYCLE = CYCLE * 8  # default FFS data chunk size for calculating moments
+
+    def __init__(self, segmentlength=DATACYCLE
                      , binfactors=[]
                      , channels=[]
-                     , tshift=0):
-        FFSTransformer.__init__(self, segmentlength, channels)
+                     , tshift=1):
+        super(MSQTransformer, self).__init__(segmentlength, channels)
 
         if binfactors == []:
-            self._binfactors = 2**np.arange(14)
-        else:
+            self._binfactors = 2**np.arange(12)
+        elif isinstance(binfactors, list):
             self._binfactors = np.array(binfactors).astype(int)
+        elif isinstance(binfactors, np.array):
+            self._binfactors = binfactors.astype(int)
+        else:
+            raise TypeError("the type of binfactors is incorrect.")
+        if not isinstance(tshift, int):
+            raise TypeError("tshift should be an integer value.")
         self._tshift = tshift
 
     def fit(self, X, y=None):
         return self
 
     def transform(self, X):
+        if not isinstance(X, tmdata):
+            raise TypeError()
         if self._channels == []:
             data = X.data
             channels = X.channels
@@ -46,6 +58,11 @@ class MSQTransformer(FFSTransformer):
         return result
 
     def sub_qestimators(self, array, frequency):
+        """Calculate qestimators for tshift == 0 where the shot noise term is
+        considered.
+
+
+        """
         time = np.zeros(self._binfactors.size)
         qestimator = np.zeros(self._binfactors.size)
         qestimator_stderr = np.zeros(self._binfactors.size)
@@ -55,13 +72,12 @@ class MSQTransformer(FFSTransformer):
             n_segments = array.size // self._segmentlength * binf
             temp_data = array[0:n_segments*(self._segmentlength//binf)] \
                         .reshape((n_segments, self._segmentlength//binf))
-            temp_k1 = np.mean(temp_data, axis=1)
-            temp_k2 = np.mean((temp_data*temp_data), axis=1)
-            index = temp_k1 > 0.
-            temp_q = temp_k2[index]/temp_k1[index] - temp_k1[index] - 1.
-            qestimator[i] = np.mean(temp_q)
+            temp_k1 = temp_data.mean(axis=1)
+            temp_k2 = (temp_data*temp_data).mean(axis=1)
+            temp_q = temp_k2/temp_k1 - temp_k1 - 1.
+            qestimator[i] = temp_q.mean()
             if n_segments > 1:
-                qestimator_stderr[i] = np.std(temp_q)/np.sqrt(n_segments - 1)
+                qestimator_stderr[i] = temp_q.std()/np.sqrt(n_segments - 1.)
             else:
                 qestimator_stderr[i] = np.abs(qestimator[i]) * 0.1 #TO DO
 
@@ -70,6 +86,9 @@ class MSQTransformer(FFSTransformer):
         return qestimator_tuple(time, qestimator, qestimator_stderr, self._tshift)
 
     def sub_qestimators_withtshift(self, array, frequency):
+        """Calculate qestimators for tshift >= 1 where no shot noise term exist.
+
+        """
         time = np.zeros(self._binfactors.size)
         qestimator = np.zeros(self._binfactors.size)
         qestimator_stderr = np.zeros(self._binfactors.size)
@@ -81,17 +100,15 @@ class MSQTransformer(FFSTransformer):
             temp_data = (array[0:n_segments*(self._segmentlength//binf)]
                         .reshape((n_segments, self._segmentlength//binf)))
 
-            mean1 = (np.mean(temp_data[:, :-self._tshift], axis=1)
-                       .reshape((-1, 1)))
-            mean2 = (np.mean(temp_data[:, self._tshift:], axis=1)
-                       .reshape((-1, 1)))
-            temp_q = (np.mean((temp_data[:, :-self._tshift] - mean1)
-                        *(temp_data[:, self._tshift:] - mean2), axis=1)
+            mean1 = temp_data[:, :-self._tshift].mean(axis=1).reshape((-1, 1))
+            mean2 = temp_data[:, self._tshift:].mean(axis=1).reshape((-1, 1))
+            temp_q = (((temp_data[:, :-self._tshift] - mean1)
+                        *(temp_data[:, self._tshift:] - mean2)).mean(axis=1)
                         .reshape((-1, 1))
                         /(mean1 + mean2) * 2 )
-            qestimator[i] = np.mean(temp_q)
+            qestimator[i] = temp_q.mean()
             if n_segments > 1:
-                qestimator_stderr[i] = np.std(temp_q)/np.sqrt(n_segments - 1)
+                qestimator_stderr[i] = temp_q.std()/np.sqrt(n_segments)
             else:
                 qestimator_stderr[i] = np.abs(qestimator[i]) * 0.1
 
