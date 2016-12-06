@@ -29,6 +29,8 @@ class BinningFuncWrapper(object):
     #self.directory = "C:\\Users\\MLab\\Google Drive\\Python Application\FFS\\binfunctions\\"
 
     def __init__(self, order):
+        if order not in range(4):
+            raise ValueError("{} order is not available".format(order))
         self._order = order
         self._table = self.loadtable(order)
         self._interpolator = self.createinterpolator(order)
@@ -47,7 +49,6 @@ class BinningFuncWrapper(object):
         elif order == 3:
             return self.Binning_Func_B3
 
-
     def Binning_Func_B0(self, t, r, td):
         return t*0.
 
@@ -60,13 +61,20 @@ class BinningFuncWrapper(object):
                 +np.sqrt(r*td+t)))                                          \
                 /(-np.sqrt((-1.+r)*td) + np.sqrt(r*td+t))))/(2.*np.sqrt((-1.+r)/r)))
         return np.power(td, 2) * result
-    # TO DO
+
     def Binning_Func_B3(self, t, r, td):
-        # = 0.001
-        # = 0.01
-        #
-        result = 0
-        return np.power(td, 3.) * result
+        dti = np.float64(0.001)
+        dri = np.float64(0.01)
+        ti = (np.log10(t/np.float64(td)) + 4.)/dti
+        ri = np.log10(r)/dri
+        return np.power(td, 3)*self._interpolator(ti,ri)
+
+    def Binning_Func_B4(self, t, r, td):
+        dti = np.float64(0.002)
+        dri = np.float64(0.02)
+        ti = (np.log10(t/np.float64(td)) + 4.)/dti
+        ri = np.log10(r)/dri
+        return np.power(td, 4)*self._interpolator(ti, ri)
 
 
     def loadtable(self, order):
@@ -77,12 +85,20 @@ class BinningFuncWrapper(object):
             #TO DO: how to read Binning_Func_B3_Table_For_Python
             #       which is in the same folder of BinningFuncWrapper
             with open(tableforB3, "r") as f:
-                # TO DO: reshape the table
-                return np.fromfile(f, dtype=np.double).reshape(8001, 401)
+                return np.fromfile(f, dtype=np.float64).reshape(8001, 401)
         elif order == 4:
-            return 0
+            with open(tableforB4) as f:
+                return np.fromfile(f, dtype=np.float64).reshape(4001, 201)
 
-
+    def createinterpolator(self, order):
+        if order in [0, 1, 2]:
+            return None
+        elif order == 3:
+            return interp2d(np.arange(8001), np.arange(401)
+                                    , self._table.transpose())
+        elif order == 4:
+            return interp2d(np.arange(4001), np.arange(201)
+                                    , self._table.transpose())
 
     @property
     def fcn(self):
