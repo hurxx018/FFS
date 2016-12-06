@@ -25,6 +25,10 @@
 # 	koposov@ast.cam.ac.uk
 # 	Updated versions can be found at http://code.google.com/p/astrolibpy/source/browse/trunk/
 #
+#  Kwang Ho Hur converted the Sergey Koposov's Python2 version to Python3 version
+# 	Kwang Ho Hur, University of Minnesota, School of Physics and Astronomy,
+#
+#
 # 								 DESCRIPTION
 #
 #  MPFIT uses the Levenberg-Marquardt technique to solve the
@@ -97,7 +101,7 @@
 # 	# Non-negative status value means MPFIT should continue, negative means
 # 	# stop the calculation.
 # 	status = 0
-# 	return([status, (y-model)/err]
+# 	return [status, (y-model)/err]
 #
 #  See below for applications with analytical derivatives.
 #
@@ -132,7 +136,7 @@
 #  return list.
 #    def myfunct(p, fjac=None, x=None, y=None, err=None)
 # 	# Parameter values are passed in "p"
-# 	# If FJAC!=None then partial derivatives must be comptuer.
+# 	# If FJAC!=None then partial derivatives must be comptued.
 # 	# FJAC contains an array of len(p), where each entry
 # 	# is 1 if that parameter is free and 0 if it is fixed.
 # 	model = F(x, p)
