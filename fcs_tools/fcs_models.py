@@ -13,7 +13,7 @@ def _checkx(x):
     if isinstance(x, (int, float)):
         return ndarray(x)
     elif isinstance(x, (list, tuple)):
-        return np.array(x)
+        return ndarray(x)
     elif isinstance(x, ndarray):
         return x
     else:
@@ -24,7 +24,10 @@ def acf2dg(x, paras, tsampling=1):
 
     paras : [G0, td, offset]
     """
-    t = _checkx(x)*tsampling
+    if tsampling == 1:
+        t = _checkx(x)
+    else:
+        t = _checkx(x)*tsampling
     if len(paras) != 3:
         raise ValueError("The number of elements in paras should be 3")
     return paras[0]/(1. + t/paras[1]) + paras[2]
@@ -34,7 +37,10 @@ def acf3dg(x, paras, tsampling=1):
 
     paras : [G0, td, r^2, offset]
     """
-    t = _checkx(x)*tsampling
+    if tsampling == 1:
+        t = _checkx(x)
+    else:
+        t = _checkx(x)*tsampling
     if len(paras) != 4:
         raise ValueError("The number of elements in paras should be 4")
     return paras[0]/(1. + t/paras[1])/sqrt(1. + t/paras[1]/paras[2]) + paras[3]
@@ -45,7 +51,10 @@ def acf2dgEC(x, paras, tsampling=1):
 
     paras : [G0, td, A0, T0, offset]
     """
-    t = _checkx(x)*tsampling
+    if tsampling == 1:
+        t = _checkx(x)
+    else:
+        t = _checkx(x)*tsampling
     if len(paras) != 5:
         raise ValueError("The number of elements in paras should be 5")
     return paras[0]/(1. + t/paras[1]) + paras[2]*exp(-t/paras[3])+ paras[4]
