@@ -82,3 +82,7 @@ class tmdata(object):
     @property
     def nchannels(self):
         return len(self._channels)
+
+    @property
+    def tsampling(self):
+        return 1./self._frequency

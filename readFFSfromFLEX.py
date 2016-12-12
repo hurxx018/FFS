@@ -96,19 +96,5 @@ def main():
     for data in ffsdata.data:
         print(data[0:20])
 
-    from FCSTransformer import FCSTransformer
-    from ACF3DGDiffFitter import ACF3DGDiffFitter
-
-    fcs = FCSTransformer(channels=[2])
-    acf_est = fcs.transform(ffsdata)
-    acffit = ACF3DGDiffFitter(params=[0.05, 0.0001, 25., 0.]
-                            , fixed=[0, 0, 1, 0]
-                            , bounds=[[0, np.inf], [0, np.inf],
-                                      [0, np.inf], [-np.inf, np.inf]])
-    result = acffit.fit(acf_est[(2,2)].time, acf_est[(2,2)].correlations
-                            , y_sigma= acf_est[(2,2)].correlations_stderr
-                            , fit_kws={'xtol':0.00001})
-    print(result.fit_report())
-
 if __name__ == "__main__":
     main()
