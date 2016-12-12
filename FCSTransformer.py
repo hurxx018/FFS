@@ -16,7 +16,10 @@ class FCSTransformer(FFSTransformer):
         [1] for the first channel
         [1, 2] for the first and second channels and so on
     """
-    def __init__(self, segmentlength=32768*4
+    CYCLE = 32768   # default FFS data chunk size for saving data from old acquistion card
+    DATACYCLE = CYCLE * 4
+
+    def __init__(self, segmentlength=DATACYCLE
                      , tau1_min = 1     # unrebinned data g(tau1_min : tau1_max)
                      , tau1_max = 16
                      , binfactor = 4    # rebin data consecutively by this factor
@@ -214,10 +217,14 @@ def main():
     xx = cor.transform(ffsdata)
     end = time.time()
     print(end - start)
-    plt.plot(xx[(0,0)], xx[(2,2)][0])
-    plt.plot(xx[(0,0)], xx[(1,1)][0])
-    plt.plot(xx[(0,0)], xx[(3,3)][0])
+    plt.plot(xx[(0,0)], xx[(2,2)][0], label="2")
+    plt.plot(xx[(0,0)], xx[(1,1)][0], label="1")
+    plt.plot(xx[(0,0)], xx[(3,3)][0], label="3")
+    plt.plot(xx[(0,0)], xx[(1,2)][0], label="12")
+    plt.plot(xx[(0,0)], xx[(1,3)][0], label="13")
+    plt.plot(xx[(0,0)], xx[(2,3)][0], label="23")
     plt.xscale("log")
+    plt.legend()
     plt.show()
     # print(xx)
 

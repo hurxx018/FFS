@@ -8,9 +8,22 @@ class FCSFitter(FFSFitter):
     """Fit auto-correlations by fcs models for the single-color FFS time-mode
     data
 
+    2DG : a single diffusing species in 2DG PSF
+    3DG : a single diffusing species in 3DG PSF
+    2DGTS : two diffusing species in 2DG PSF
+    3DGTS : two diffusing species in 3DG PSF
+    2DGGN : a single diffusing species in 2DG PSF in the presence of Gaussian
+            Noise (exponential correlation)
+    3DGGN : a single diffusing species in 3DG PSF in the presence of Gaussian
+            Noise (exponential correlation)
     """
-    dic_models = {"2DG":fcs_models.acf2dg, "3DG":fcs_models.acf3dg}
-    dic_nparas = {"2DG":3, "3DG":4}
+    dic_models = {"2DG":fcs_models.acf2dg, "3DG":fcs_models.acf3dg,
+                    "2DGTS":fcs_models.acf2dgTS, "3DGTS":fcs_models.acf3dgTS,
+                    "2DGGN":fcs_models.acf2dgGN, "3DGGN":fcs_models.acf3dgGN}
+    dic_nparas = {"2DG":3, "3DG":4, "2DGTS":6, "3DGTS":7, "2DGGN":5, "3DGGN":6}
+
+    CYCLE = 32768   # default FFS data chunk size for saving data from old acquistion card
+    DATACYCLE = CYCLE * 4
 
     def __init__(self, model="2DG",
                        channels=[1],
@@ -23,32 +36,35 @@ class FCSFitter(FFSFitter):
         super(FCSFitter, self).__init__(model, channels)
         self.setModel(model, paras, fixed)
 
-    def fit(self, t, g, gerr, tsampling=1):
+    def fit(self, t, g, gerr, tsampling=1, tseg=DATACYCLE):
         try:
             super(FCSFitter, self)._checkvalues("paras", self._paras)
             super(FCSFitter, self)._checkvalues("fixed", self._fixed)
         except:
-            print("Update paras for the MSQ model {}".format(self._model))
-            print("Update fixed for the MSQ model {}".format(self._model))
+            print("Update paras for the FCS model {}".format(self._model))
+            print("Update fixed for the FCS model {}".format(self._model))
             return
 
         x = t
         y = g
         yerr = gerr
-
-        fitinfo = {"tsampling":tsampling }
+        if self._model in ["2DGGN", "3DGGN"]:
+            fitinfo = {"tsampling":tsampling, "tseg":tseg}
+        else:
+            fitinfo = {"tsampling":tsampling}
+            
         parinfo = [{'value':v, 'fixed':f, 'limited':[1,0], 'limits':[0.,0.]}
          					for v, f in zip(self._paras, self._fixed)]
 
         def myfunct(p, fjac=None, x=None, y=None, err=None, info=None):
-            model =  self._fct(x, p) #, tsampling=info["tsampling"]
+            model =  self._fct(x, p, **info) #tsampling=info["tsampling"]
             status = 0
             return [status, (y-model)/err]
 
         fa = {"x":x, "y":y, "err":yerr, "info":fitinfo}
         res = mpfit(myfunct, self._paras, functkw=fa, parinfo=parinfo, maxiter=1000, \
                     quiet=1)
-        yfit = self._fct(x, res.params) #, tsampling=fitinfo["tsampling"]
+        yfit = self._fct(x, res.params, **fitinfo ) #tsampling=fitinfo["tsampling"]
         dof = y.size - len(self._paras) + sum(self._fixed)
         redchi2 = (np.power(y - yfit, 2)/np.power(yerr, 2)).sum()/dof
         return res, yfit, redchi2
