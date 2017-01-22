@@ -24,7 +24,7 @@ class MSQRBTransformer(FFSTransformer):
         if not binfactors:
             self._binfactors = 2**np.arange(12)
         elif isinstance(binfactors, list):
-            self._binfactors = np.array(binfactors).astype(int)
+            self._binfactors = np.array(binfactors, dtype=int)
         elif isinstance(binfactors, np.array):
             self._binfactors = binfactors.astype(int)
         else:
