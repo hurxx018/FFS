@@ -111,27 +111,29 @@ class tmdataSR(tmdata):
     """
 
     def __init__(self, filenames=[], channels=[], frequency=1):
-        super(tmdataRebin, self).__init__(filenames, channels, frequency)
+        super(tmdataSR, self).__init__(filenames, channels, frequency)
         self._rebindata = {}
-        self._rebindata[1] = self.data
         self._rebinfreq = {}
         self._rebinfreq[1] = self.frequency
+
+    def assign_rebindata(self):
+        self._rebindata[1] = self.data
 
     def rebin(self, cha=1, lbin=1):
         self._checkchalbin(cha, lbin)
         try:
             if self._rebindata[lbin][cha-1] is not None:
-                return self._rebindata[lbin][cha-1], self._rebinfreq[lbin]
+                return self._rebindata[lbin][cha-1]#, self._rebinfreq[lbin]
             else:
                 k, f = self._rebin(cha, lbin)
                 self._rebindata[lbin][cha-1] = k
-                return k, f
+                return k
         except:
             self._rebindata.setdefault(lbin, [None]*self.nchannels)
             k, f = self._rebin(cha, lbin)
             self._rebindata[lbin][cha-1] = k
             self._rebinfreq[lbin] = f
-            return k, f
+            return k
 
     def _rebin(self, cha, lbin):
         for i in sorted(self._rebindata.keys(), reverse=True):
@@ -149,7 +151,7 @@ class tmdataSR(tmdata):
         return self._rebindata
     @property
     def rebinfrequency(self):
-        return self._rebinfrequency
+        return self._rebinfreq
 
 
 class tmdataMR(tmdata):
@@ -162,19 +164,21 @@ class tmdataMR(tmdata):
     def __init__(self, filenames=[], channels=[], frequency=1):
         super(tmdataMR, self).__init__(filenames, channels, frequency)
         self._rebindata = {}
-        self._rebindata[1] = self.data
         self._rebinfreq = {}
         self._rebinfreq[1] = self.frequency
+
+    def assign(self):
+        self._rebindata[1] = self.data
 
     def rebin(self, cha=1, lbin=1):
         self._checkchalbin(cha, lbin)
         try:
-            return self._rebindata[lbin][cha-1], self._rebinfreq[lbin]
+            return self._rebindata[lbin][cha-1]#, self._rebinfreq[lbin]
         except:
             k, f = self._rebin(cha, lbin)
             self._rebindata[lbin] = k
             self._rebinfreq[lbin] = f
-            return k[cha-1], f
+            return k[cha-1]
 
     def _rebin(self, cha, lbin):
         for i in sorted(self._rebindata.keys(), reverse=True):
@@ -192,4 +196,4 @@ class tmdataMR(tmdata):
         return self._rebindata
     @property
     def rebinfrequency(self):
-        return self._rebinfrequency
+        return self._rebinfreq

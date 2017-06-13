@@ -1,9 +1,9 @@
 import numpy as np
-from tmdata import tmdataSR
+from tmdata import tmdata, tmdataSR, tmdataMR
 
 def iss0(filenames, nch):
     data = []
-    for filename in self.filenames:
+    for filename in filenames:
         with open(filename) as f:
             temp_data = np.fromfile(f, dtype=np.int32)
         data.append(temp_data)
@@ -15,8 +15,7 @@ def flex8(filenames, nch):
     if nch == 1:
         return [temp_data]
     elif nch == 2:
-        temp_data = (temp_data.reshape(temp_data.size//2, 2)
-                                      .T)
+        temp_data = (temp_data.reshape(temp_data.size//2, 2).T)
         return [temp_data[0], temp_data[1]]
     else:
         raise ValueError("channels are incorrectly assigned.")
@@ -27,8 +26,7 @@ def flex16(filenames, nch):
     if nch == 1:
         return [temp_data]
     elif nch == 2:
-        temp_data = (temp_data.reshape(temp_data.size//2, 2)
-                                      .T)
+        temp_data = (temp_data.reshape(temp_data.size//2, 2).T)
         return [temp_data[0], temp_data[1]]
     else:
         raise ValueError("channels are incorrectly assigned.")
@@ -53,14 +51,28 @@ class rFFS(tmdataSR):
     def __init__(self, filenames=[], channels=[], frequency=1, daqcard=None):
         super(rFFS, self).__init__(filenames, channels, frequency)
         #tmdata.__init__(self, filenames, channels, frequency)
+        if daqcard not in self.daqcards.keys():
+            print("daqcard can be either one among")
+            for key in self.daqcards.keys():
+                print(key)
+            raise ValueError("daqcard is not given correctly.")
+        self._daqcard = daqcard
         self._data = self.readFFSData()
         self._checkdata()
+        self.assign_rebindata()
 
     def readFFSData(self):
         if not self.filenames:
             return []
         else:
-            return self.daqcards[daqcard](self.filenames, self.nchannels)
+            return self.daqcards[self._daqcard](self.filenames, self.nchannels)
+
+    def get_tmdataMR(self):
+        temp = tmdatMR(self.filenames, self.channels, self.frequency)
+        temp.data = self.data
+        temp.rebinfrequency = self.rebinfrequency
+        temp.rebindata = self.rebindata
+        return temp
 
     @property
     def filenames(self):
@@ -81,7 +93,6 @@ class rFFS(tmdataSR):
         """
         return  {key:value for key, value in self.__dict__.items()
                          if not key.startswith('__') and not callable(key)}
-
 
     def __str__(self):
         for key, value in self.info().items():
