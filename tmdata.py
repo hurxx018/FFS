@@ -1,12 +1,12 @@
-
+import numpy as np
 
 class tmdata(object):
     """
-    A superclass for the FFS data
+    A superclass for the FFS data   v 0.0.1 in Python 3
     input variables:
-    filenames : a python list of filenames
     channels : a python list of channels in FFS data.
     frequency: an integer of frequency of FFS data collection
+    memorize : a flag varialbe which enables to memorize rebinned data
 
     Instance Methods:
     Setters: setFilenames, setChannels, setFrequency
@@ -14,11 +14,7 @@ class tmdata(object):
 
     """
 
-    def __init__(self, filenames=[], channels=[], frequency=1):
-        if isinstance(filenames, list):
-            self._filenames = filenames
-        else:
-            raise TypeError("filenames is not a python list.")
+    def __init__(self, channels=[], frequency=1, memorize=True):
 
         if isinstance(channels, list):
             self._channels = channels
@@ -29,63 +25,97 @@ class tmdata(object):
             self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
-        self._data = [None]*len(channels)
+        self._data = {}
+        self._filenames = {}
+        self.memorize = memorize
 
-    def rebin(self, cha=1, lbin=1):
-        self._checkchalbin(cha, lbin)
-        if lbin == 1:
-            return self._data[cha-1], self._frequency
-        else:
-            bindatasize = self._data[cha-1].size//lbin
-            k = (self._data[cha-1][:bindatasize*lbin]
-                     .reshape(bindatasize, lbin).sum(axis=1))
-            return k, self._frequency/lbin
+    def rebin(self, ch=1, lbin=1):
+        self._checkchalbin(ch, lbin)
+        k = self._data[ch].get(lbin, None)
+        if not k:  # instead of ( k is None: )
+            k, f = self._newrebin(ch, lbin)
+            if self.memorize:
+                self._data[ch][lbin] = k
+                self._frequency.setdefault(lbin, f)
+        return k
+
+    def _newrebin(self, ch, lbin):
+        for i in sorted(self._data[ch].keys(), reverse=True):
+            if lbin % i == 0:
+                temp_ds = self._data[ch][i].size
+                temp_lbin = lbin // i
+                bds = temp_ds // (temp_lbin)
+                k = (self._data[ch][i][:bds*temp_lbin]
+                            .reshape(bds, temp_lbin).sum(axis=1))
+                f = self._frequency[i] / temp_lbin
+                return k, f
 
     def _checkdata(self):
         if self.nchannels > 1:
-            for i in range(self.nchannels - 1):
-                assert len(self._data[i]) == len(self._data[i+1]), \
+            length = self._data[self._channels[0]][1].size
+            for key, data in self._data.items():
+                assert data[1].size == length, \
                     "The number of data points does not match."
 
-    def _checkchalbin(self, cha, lbin):
-        if not (isinstance(cha, int) and (cha in range(1, self.nchannels+1))):
-            raise ValueError("{} is not available".format(cha))
+    def _checkchalbin(self, ch, lbin):
+        if ch not in self._channels:
+            raise ValueError("{} is not available".format(ch))
         if not isinstance(lbin, int):
             raise TypeError('The type of lbin is int.')
 
+    def info(self):
+        """
+        Returns the information in the class
+        """
+        return  {key:value for key, value in self.__dict__.items()
+                         if not key.startswith('__') and not callable(key)}
+
+    def reset(self):
+        if self._data:
+            self._data = { key: {1: d[1]} for key, d in self._data.items()}
+            self._frequency = { 1:self._frequency[1] }
+
+    def __str__(self):
+        for key, value in self.info().items():
+            print("{0}  :   {1}".format(key, value))
+        return ""
+
+    # What is this fuction?
+    def ch(self, ch=None, lbin=1):
+        if !ch:# == None:
+            for i in sorted(self._channels.keys):
+                return self.rebin(ch=i, lbin=lbin)
+        return self.rebin(ch=ch, lbin=lbin)
+
     @property
     def filenames(self):
-        pass # defined in subclasses
-
-    @filenames.setter
-    def filenames(self, filenames):
         pass # defined in subclasses
 
     @property
     def channels(self):
         return self._channels
 
-    @channels.setter
-    def channels(self, channels):
-        if isinstance(channels, list):
-            self._channels = channels
-        else:
-            raise TypeError("channels is not a python list.")
-
     @property
     def frequency(self):
-        return self._frequency
+        return self._frequency[1]
 
     @frequency.setter
     def frequency(self, frequency):
-        if isinstance(frequency, int):
+        # reset the self._frequency and assign a new frequency
+        if isinstance(frequency, (int, float)):
             self._frequency = frequency
         else:
             raise TypeError("frequency is not an integer.")
 
+    # get a frequency after rebin with lbin
+    def getfreq(self, lbin=1):
+        return self._frequency/lbin
+
     @property
     def data(self):
-        return self._data
+        # get the original data only.
+        return { key: d[1] for key, d in self._data.items() }
+
     @data.setter
     def data(self, data):
         if not isinstance(data, list):
@@ -93,7 +123,19 @@ class tmdata(object):
         if len(data) != self.nchannels:
             print("The number of channels is required to be {}".format(self.nchannels))
             raise ValueError("The number of channels is not correct")
-        self._data = data
+        self._data = { i: {1:d} for i, d in zip(self._channels, data) }
+
+    # not sure yet the way to deal with the filename because
+    # flex card needs only one filename but iss or pp-1000 card needs multiple filenames
+    # for multiple channels
+    def setdata(self, ch, data, filename=None):
+        if not isinstance(data, (np.ndarray)):
+            raise TypeError("The type of data has tobe a numpy.ndarray.")
+        if ch not in self._channels:
+            print("The channel has to be in {}".format(self._channels))
+            raise ValueError("The channel is not correct")
+        self._data[ch] = {1: data}
+        self._filenames[ch] = filename
 
     @property
     def nchannels(self):
@@ -101,99 +143,60 @@ class tmdata(object):
 
     @property
     def tsampling(self):
-        return 1./self._frequency
+        return 1./self._frequency[1]
+
+def main():
+    import numpy as np
+
+    temp = tmdata([0], 20000)
+    temp.setdata(0, np.ones(32768*2))
+    temp.ch()
 
 
-class tmdataSR(tmdata):
-    """tmdata with the memoization of rebinned data
-
-    For a given cha and lbin, perform the rebin individually .
-    """
-
-    def __init__(self, filenames=[], channels=[], frequency=1):
-        super(tmdataSR, self).__init__(filenames, channels, frequency)
-        self._rebindata = {}
-        self._rebinfreq = {}
-        self._rebinfreq[1] = self.frequency
-
-    def assign_rebindata(self):
-        self._rebindata[1] = self.data
-
-    def rebin(self, cha=1, lbin=1):
-        self._checkchalbin(cha, lbin)
-        try:
-            if self._rebindata[lbin][cha-1] is not None:
-                return self._rebindata[lbin][cha-1]#, self._rebinfreq[lbin]
-            else:
-                k, f = self._rebin(cha, lbin)
-                self._rebindata[lbin][cha-1] = k
-                return k
-        except:
-            self._rebindata.setdefault(lbin, [None]*self.nchannels)
-            k, f = self._rebin(cha, lbin)
-            self._rebindata[lbin][cha-1] = k
-            self._rebinfreq[lbin] = f
-            return k
-
-    def _rebin(self, cha, lbin):
-        for i in sorted(self._rebindata.keys(), reverse=True):
-            if lbin % i == 0 and (self._rebindata[i][cha-1] is not None):
-                temp_ds = self._rebindata[i][cha-1].size
-                temp_lbin = lbin // i
-                bds = temp_ds // (temp_lbin)
-                k = (self._rebindata[i][cha-1][:bds*temp_lbin]
-                            .reshape(bds, temp_lbin).sum(axis=1))
-                f = self._rebinfreq[i] / temp_lbin
-                return k, f
-
-    @property
-    def rebindata(self):
-        return self._rebindata
-    @property
-    def rebinfrequency(self):
-        return self._rebinfreq
+    temp = tmdata(['A', 'B'], 100000)
+    temp.add('A', np.ones(32768*2))
+    temp.add('B', np.ones(32768*2))
+    print(temp)
+    temp.ch('A',lbin=5)
 
 
-class tmdataMR(tmdata):
-    """tmdata with the memoization of rebinned data
+    from rFFSx import rFFS
+    filename1 = "A488_cal.1.001.bin"
+    filename2 = "A488_cal.2.001.bin"
+    filename3 = "A488_cal.3.001.bin"
+    temp = rFFS( [1, 2, 3], 100000, "iss0" )
+    ffsdata = temp.load( [filename1, filename2, filename3] )
+    #ffsdata = rFFS( [filename1, filename2, filename3], [1, 2, 3], 100000, "iss0" )
+    print(ffsdata)
+    print("data :")
+    #for key, data in ffsdata.data.items():
+    #    print(data[1][0:20])
+    print("")
 
-    For a given rebin-factor, this rebins data of all channels and memorizes
-    them.
-    """
+    print("Rebin by factor 4")
+    rebinned_k1 = ffsdata.rebin(1, 4)  # for the channel 1
 
-    def __init__(self, filenames=[], channels=[], frequency=1):
-        super(tmdataMR, self).__init__(filenames, channels, frequency)
-        self._rebindata = {}
-        self._rebinfreq = {}
-        self._rebinfreq[1] = self.frequency
+    print("After rebinning, the _rebindata has a key of 4 and its rebinned data.")
+    print(ffsdata)
+    print()
 
-    def assign(self):
-        self._rebindata[1] = self.data
+    print("Rebin by factor 8")
+    rebinned_k18 = ffsdata.rebin(1, 8)  # for the channel 1
 
-    def rebin(self, cha=1, lbin=1):
-        self._checkchalbin(cha, lbin)
-        try:
-            return self._rebindata[lbin][cha-1]#, self._rebinfreq[lbin]
-        except:
-            k, f = self._rebin(cha, lbin)
-            self._rebindata[lbin] = k
-            self._rebinfreq[lbin] = f
-            return k[cha-1]
+    print("Rebin by factor 8")
+    rebinned_k182 = ffsdata.rebin(1, 8)  # for the channel 1
 
-    def _rebin(self, cha, lbin):
-        for i in sorted(self._rebindata.keys(), reverse=True):
-            if lbin % i == 0:
-                temp_ds = self._rebindata[i][0].size
-                temp_lbin = lbin // i
-                bds = temp_ds // (temp_lbin)
-                k = [temp_k[:bds*temp_lbin].reshape(bds, temp_lbin).sum(axis=1)
-                        for temp_k in self._rebindata[i]]
-                f = self._rebinfreq[i] / temp_lbin
-                return k, f
+    rebinned_k2 = ffsdata.rebin(2, 4)  # for the channel 2
+    print("After rebinning, the _rebindata has a key of 4 and its rebinned data.")
+    print(ffsdata)
+    print()
 
-    @property
-    def rebindata(self):
-        return self._rebindata
-    @property
-    def rebinfrequency(self):
-        return self._rebinfreq
+    # rebin channel 3 with a rebin-factor 16
+    rebinned_k3 = ffsdata.rebin(3, 16)  # for the channel 3
+    print("After rebinning, the _rebindata has a key of 16 and its rebinned data.")
+    print(ffsdata)
+    print()
+
+
+if __name__ == '__main__':
+    main()
