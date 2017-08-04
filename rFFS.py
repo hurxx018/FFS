@@ -1,5 +1,5 @@
 import numpy as np
-from tmdata import tmdata, tmdataSR, tmdataMR
+from tmdata import tmdata
 
 def iss0(filenames, nch):
     data = []
@@ -59,22 +59,35 @@ class rFFS(object):
         self._frequency = frequency
 
     def load(self, filenames=[]):
-        tm_dataSR = tmdataSR(filenames, self._channels, self._frequency)
+        tm_data = tmdata(self._channels, self._frequency)
         if filenames:
             if self._daqcard != "sim":
-                tm_dataSR.data = self.daqcards[self._daqcard](filenames, tm_dataSR.nchannels)
-                tm_dataSR._checkdata()
-        tm_dataSR.assign_rebindata()
-        return tm_dataSR
+                tm_data.data = self.daqcards[self._daqcard](filenames, tm_data.nchannels)
+                self._setfilenames(tm_data, filenames)
+                tm_data._checkdata()
+        return tm_data
 
-    # def get_tmdataMR(self, tm_data):     This can be deprecatted for the easy management
-    #     # get a tmdataMR for the convenience of rebinning
-    #     if not isinstance(tm_data, tmdata):
-    #         raise TypeError("Type of input is not tmdata.")
-    #     tm_dataMR = tmdataMR(tm_data.filenames, tm_data.channels, tm_data.frequency)
-    #     tm_dataMR.data = tm_data.data
-    #     tm_dataMR.assign_rebindata()
-    #     return tm_dataMR
+    def _setfilenames(self, tm_data, filenames):
+        if self._daqcard == "iss0":
+            tm_data._filenames = {ch:f for ch, f in zip(self.channels, filenames)}
+        elif self._daqcard in ( "flex8",  "flex16"):
+            num = len(self.channels)
+            tm_data._filenames = {ch:f for ch, f in zip(self.channels, filenames*num)}
+        else:
+            raise ValueError("Not available")
+
+
+    @property
+    def daqcard(self):
+        return self._daqcard
+
+    @property
+    def frequency(self):
+        return self._frequency
+
+    @property
+    def channels(self):
+        return self._channels
 
 def main():
 
@@ -86,8 +99,8 @@ def main():
     temp = ffsdata.load( [filename1, filename2, filename3] )
     print(temp)
     print("data :")
-    for data in temp.data:
-        print(data[0:20])
+    for key, data in temp.data.items():
+        print(key, " : ", data)
     print("")
 
     # Use the Flex card
@@ -96,18 +109,18 @@ def main():
     temp = ffsdata.load([filename1])
     print(temp)
     print("data :")
-    for data in temp.data:
-        print(data[0:20])
+    for key, data in temp.data.items():
+        print(key, " : ", data)
     print()
 
     # For the simulation
     ffsdata = rFFS([1, 2], 100000, "sim")
     temp = ffsdata.load([])
     temp.data = [np.ones(32768*2, dtype=int), np.ones(32768*2, dtype=int)]
-    temp.assign_rebindata()
+
     print(temp)
-    for data in temp.data:
-        print(data[0:20])
+    for key, data in temp.data.items():
+        print(key, " : ", data)
 
 if __name__ == '__main__':
     main()

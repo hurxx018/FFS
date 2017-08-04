@@ -32,11 +32,10 @@ class tmdata(object):
     def rebin(self, ch=1, lbin=1):
         self._checkchalbin(ch, lbin)
         k = self._data[ch].get(lbin, None)
-        if not k:  # instead of ( k is None: )
-            k, f = self._newrebin(ch, lbin)
+        if k is None:
+            k = self._newrebin(ch, lbin)
             if self.memorize:
                 self._data[ch][lbin] = k
-                self._frequency.setdefault(lbin, f)
         return k
 
     def _newrebin(self, ch, lbin):
@@ -47,8 +46,7 @@ class tmdata(object):
                 bds = temp_ds // (temp_lbin)
                 k = (self._data[ch][i][:bds*temp_lbin]
                             .reshape(bds, temp_lbin).sum(axis=1))
-                f = self._frequency[i] / temp_lbin
-                return k, f
+                return k
 
     def _checkdata(self):
         if self.nchannels > 1:
@@ -73,23 +71,21 @@ class tmdata(object):
     def reset(self):
         if self._data:
             self._data = { key: {1: d[1]} for key, d in self._data.items()}
-            self._frequency = { 1:self._frequency[1] }
 
     def __str__(self):
         for key, value in self.info().items():
             print("{0}  :   {1}".format(key, value))
         return ""
 
-    # What is this fuction?
     def ch(self, ch=None, lbin=1):
-        if !ch:# == None:
-            for i in sorted(self._channels.keys):
+        if not ch:
+            for i in sorted(self._channels):
                 return self.rebin(ch=i, lbin=lbin)
         return self.rebin(ch=ch, lbin=lbin)
 
     @property
     def filenames(self):
-        pass # defined in subclasses
+        return self._filenames
 
     @property
     def channels(self):
@@ -97,7 +93,7 @@ class tmdata(object):
 
     @property
     def frequency(self):
-        return self._frequency[1]
+        return self._frequency
 
     @frequency.setter
     def frequency(self, frequency):
@@ -105,11 +101,11 @@ class tmdata(object):
         if isinstance(frequency, (int, float)):
             self._frequency = frequency
         else:
-            raise TypeError("frequency is not an integer.")
+            raise TypeError("frequency is not a numeric.")
 
     # get a frequency after rebin with lbin
     def getfreq(self, lbin=1):
-        return self._frequency/lbin
+        return self._frequency*1./lbin
 
     @property
     def data(self):
@@ -154,23 +150,22 @@ def main():
 
 
     temp = tmdata(['A', 'B'], 100000)
-    temp.add('A', np.ones(32768*2))
-    temp.add('B', np.ones(32768*2))
+    temp.setdata('A', np.ones(32768*2))
+    temp.setdata('B', np.ones(32768*2))
     print(temp)
     temp.ch('A',lbin=5)
 
 
-    from rFFSx import rFFS
+    from rFFS import rFFS
     filename1 = "A488_cal.1.001.bin"
     filename2 = "A488_cal.2.001.bin"
     filename3 = "A488_cal.3.001.bin"
-    temp = rFFS( [1, 2, 3], 100000, "iss0" )
-    ffsdata = temp.load( [filename1, filename2, filename3] )
-    #ffsdata = rFFS( [filename1, filename2, filename3], [1, 2, 3], 100000, "iss0" )
+    rffs = rFFS( [1, 2, 3], 100000, "iss0" )
+    ffsdata = rffs.load( [filename1, filename2, filename3] )
     print(ffsdata)
     print("data :")
-    #for key, data in ffsdata.data.items():
-    #    print(data[1][0:20])
+    for key, data in ffsdata.data.items():
+       print(key, ": ", data[0:20])
     print("")
 
     print("Rebin by factor 4")
