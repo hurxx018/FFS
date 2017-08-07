@@ -29,8 +29,8 @@ def dark(X_dark, binfactors, segmentlength=32768*4, channel=1, tshift=1):
             k1[i] = (t_k1_1 + t_k1_2).mean(axis=0)/2.
             k2[i] = t_k2.mean(axis=0)
         elif tshift == 0:
-            t_k1 = data.mean(axis=1)
-            t_k2 = np.power(data, 2).mean(axis=1) - t_k1 - np.power(t_k1, 2)
+            t_k1 = temp.mean(axis=1)
+            t_k2 = np.power(temp, 2).mean(axis=1) - t_k1 - np.power(t_k1, 2)
             k1[i] = t_k1.mean(axis=0)
             k2[i] = t_k2.mean(axis=0)
         else:
@@ -130,8 +130,8 @@ def msq_est(X, binfactors, segmentlength=32768*4, channel=1, tshift=1):
             msq_err[i] = q.std()/np.sqrt(nsegs-1)
 
         elif tshift == 0:
-            t_k1 = data.mean(axis=1)
-            t_k2 = np.power(data, 2).mean(axis=1) - t_k1 - np.power(t_k1, 2)
+            t_k1 = temp.mean(axis=1)
+            t_k2 = np.power(temp, 2).mean(axis=1) - t_k1 - np.power(t_k1, 2)
 
             q = t_k2/t_k1
             msq[i] = q.mean()
@@ -168,7 +168,7 @@ class MSQTransformer(FFSTransformer):
             self._binfactors = 2**np.arange(10, dtype=np.int64)
         elif isinstance(binfactors, list):
             self._binfactors = np.array(binfactors, dtype=np.int64)
-        elif isinstance(binfactors, np.array):
+        elif isinstance(binfactors, np.ndarray):
             self._binfactors = binfactors.astype(np.int64)
         else:
             raise TypeError("the type of binfactors is incorrect.")
@@ -205,10 +205,11 @@ class MSQTransformer(FFSTransformer):
             should be the same to the lenghth of binfactors)
 
         Output >> a namedtuple (tseg, msq_est, msq_err, tshift)
+            where tseg is a sequence of number of data points per segment
         """
         if not isinstance(X, tmdata):
             raise TypeError("X for counts should be a type of tmdata.")
-        if not self._channels:
+        if self._channels:
             tch = self._channels[0]
         else:
             tch = X.channels[0]
@@ -219,7 +220,7 @@ class MSQTransformer(FFSTransformer):
             temp = msq_est(X, self._binfactors, self._segmentlength, tch, self._tshift)
         msq_est_tuple = collections.namedtuple("MSQ", \
                             ["t", "msq", "err", "tsfhit"])
-        return msq_est_tuple(temp[0]/X.frequency, temp[1], temp[2], self._tshift)
+        return msq_est_tuple(temp[0], temp[1], temp[2], self._tshift)
 
     @property
     def binfactors(self):

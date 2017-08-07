@@ -139,7 +139,7 @@ class tmdata(object):
 
     @property
     def tsampling(self):
-        return 1./self._frequency[1]
+        return 1./self._frequency
 
 def main():
     import numpy as np
