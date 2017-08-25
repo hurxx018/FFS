@@ -19,13 +19,16 @@ def dark(X_dark, binfactors, segmentlength=32768*4, channel=1, tshift=1):
     k1 = np.zeros( len(binfactors) )
     k2 = np.zeros( len(binfactors) )
     data = X_dark.ch(channel, 1)
-    for i, b in enumerate(binfactors):
-        nsegs = data.size//segmentlength*b
-        temp = data[:nsegs*segmentlength//b].reshape(nsegs, segmentlength//b)
+    for i, binf in enumerate(binfactors):
+        nsegs = data.size//segmentlength*binf
+        temp = data[:nsegs*segmentlength//binf].reshape(nsegs, segmentlength//binf)
         if tshift > 0:
-            t_k1_1 = temp[:, :-tshift].mean(axis=1)
-            t_k1_2 = temp[:, tshift:].mean(axis=1)
-            t_k2 = (temp[:, :-tshift]*temp[:, tshift:]).mean(axis=1) - t_k1_1*t_k1_2
+            left_k = temp[:, :-tshift]
+            right_k = temp[:, tshift:]
+
+            t_k1_1 = left_k.mean(axis=1)
+            t_k1_2 = right_k.mean(axis=1)
+            t_k2 = (left_k*right_k).mean(axis=1) - t_k1_1*t_k1_2
             k1[i] = (t_k1_1 + t_k1_2).mean(axis=0)/2.
             k2[i] = t_k2.mean(axis=0)
         elif tshift == 0:
@@ -72,9 +75,12 @@ def msq_est_dark(X, binfactors, segmentlength=32768*4, channel=1, tshift=1, dark
 
         temp = data[:nsegs*segmentlength//binf].reshape(nsegs, segmentlength//binf)
         if tshift > 0:
-            t_k1_1 = temp[:, :-tshift].mean(axis=1)
-            t_k1_2 = temp[:, tshift:].mean(axis=1)
-            t_k2 = (temp[:, :-tshift]*temp[:, tshift:]).mean(axis=1) - t_k1_1*t_k1_2
+            left_k = temp[:, :-tshift]
+            right_k = temp[:, tshift:]
+
+            t_k1_1 = left_k.mean(axis=1)
+            t_k1_2 = right_k.mean(axis=1)
+            t_k2 = (left_k*right_k).mean(axis=1) - t_k1_1*t_k1_2
 
             m1 = (t_k1_1 + t_k1_2)/2. - dark1   # dark count correction
             m2 = t_k2 - dark2                   # dark count correction
@@ -118,12 +124,14 @@ def msq_est(X, binfactors, segmentlength=32768*4, channel=1, tshift=1):
     for i, binf in enumerate(binfactors):
         tseg[i] = segmentlength // binf
         nsegs = data.size//segmentlength*binf
-        temp = data[ : nsegs*segmentlength//binf]
-        temp = temp.reshape(nsegs, segmentlength//binf)
+        temp = data[:nsegs*segmentlength//binf].reshape(nsegs, segmentlength//binf)
         if tshift > 0:
-            t_k1_1 = temp[:, :-tshift].mean(axis=1)
-            t_k1_2 = temp[:, tshift:].mean(axis=1)
-            t_k2 = (temp[:, :-tshift]*temp[:, tshift:]).mean(axis=1) - t_k1_1*t_k1_2
+            left_k = temp[:, :-tshift]
+            right_k = temp[:, tshift:]
+
+            t_k1_1 = left_k.mean(axis=1)
+            t_k1_2 = right_k.mean(axis=1)
+            t_k2 = (left_k*right_k).mean(axis=1) - t_k1_1*t_k1_2
 
             q = t_k2/(t_k1_1 + t_k1_2)*2.
             msq[i] = q.mean()
@@ -163,18 +171,8 @@ class MSQTransformer(FFSTransformer):
                      , channels=[]
                      , tshift=1):
         super(MSQTransformer, self).__init__(segmentlength, channels)
-
-        if binfactors == []:
-            self._binfactors = 2**np.arange(10, dtype=np.int64)
-        elif isinstance(binfactors, list):
-            self._binfactors = np.array(binfactors, dtype=np.int64)
-        elif isinstance(binfactors, np.ndarray):
-            self._binfactors = binfactors.astype(np.int64)
-        else:
-            raise TypeError("the type of binfactors is incorrect.")
-        if not isinstance(tshift, int):
-            raise TypeError("tshift should be an integer value.")
-        self._tshift = tshift
+        self.binfactors = binfactors
+        self.tshift = tshift
 
     # def fit(self, X, y=None):
     #     return self
@@ -189,12 +187,12 @@ class MSQTransformer(FFSTransformer):
         """
         if not isinstance(X, tmdata):
             raise TypeError("X for dark counts should be a type of tmdata.")
-        if not self._channels:
-            tch = self._channels[0]
+        if not self.channels:
+            tch = self.channels[0]
         else:
             tch = X.channels[0]
 
-        return dark(X, self._binfactors, self._segmentlength, tch, self._tshift)
+        return dark(X, self.binfactors, self.segmentlength, tch, self.tshift)
 
 
     def transform(self, X, dark=None):
@@ -209,37 +207,41 @@ class MSQTransformer(FFSTransformer):
         """
         if not isinstance(X, tmdata):
             raise TypeError("X for counts should be a type of tmdata.")
-        if self._channels:
-            tch = self._channels[0]
+        if self.channels:
+            tch = self.channels[0]
         else:
             tch = X.channels[0]
 
         if dark:
-            temp = msq_est_dark(X, self._binfactors, self._segmentlength, tch, self._tshift, dark)
+            temp = msq_est_dark(X, self.binfactors, self.segmentlength, tch, self.tshift, dark)
         else:
-            temp = msq_est(X, self._binfactors, self._segmentlength, tch, self._tshift)
+            temp = msq_est(X, self.binfactors, self.segmentlength, tch, self.tshift)
         msq_est_tuple = collections.namedtuple("MSQ", \
                             ["t", "msq", "err", "tsfhit"])
-        return msq_est_tuple(temp[0], temp[1], temp[2], self._tshift)
+        return msq_est_tuple(temp[0], temp[1], temp[2], self.tshift)
 
     @property
     def binfactors(self):
-        return self._binfactors
-
+        return self.__binfactors
     @binfactors.setter
-    def binfactors(self, values):
-        if isinstance(values, np.ndarray):
-            self._binfactors = values
+    def binfactors(self, values=[]):
+        if values == []:
+            self.__binfactors = 2**np.arange(10, dtype=np.int64)
+        elif isinstance(values, list):
+            self.__binfactors = np.array(values, dtype=np.int64)
+        elif isinstance(values, np.ndarray):
+            self.__binfactors = valus.astype(np.int64)
         else:
-            self._binfactors = np.array(values)
+            raise TypeError("the type of binfactors is incorrect.")
 
     @property
     def tshift(self):
-        return self._tshift
-
+        return self.__tshift
     @tshift.setter
-    def tshift(self, value):
-        self._tshift = value
+    def tshift(self, value=1):
+        assert (isinstance(value, int) and (value >= 0)), \
+            "TypeError: tshift should be a non-negative integer"
+        self.__tshift = value
 
 
 def main():

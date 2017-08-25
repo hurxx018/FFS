@@ -58,7 +58,7 @@ class tmdata(object):
     def _checkchalbin(self, ch, lbin):
         if ch not in self._channels:
             raise ValueError("{} is not available".format(ch))
-        if not isinstance(lbin, int):
+        if not isinstance(lbin, (int, np.int64) ):
             raise TypeError('The type of lbin is int.')
 
     def info(self):
@@ -126,7 +126,7 @@ class tmdata(object):
     # for multiple channels
     def setdata(self, ch, data, filename=None):
         if not isinstance(data, (np.ndarray)):
-            raise TypeError("The type of data has tobe a numpy.ndarray.")
+            raise TypeError("The type of data has to be a numpy.ndarray.")
         if ch not in self._channels:
             print("The channel has to be in {}".format(self._channels))
             raise ValueError("The channel is not correct")
